@@ -1,0 +1,65 @@
+/* =======================
+   LIST ITEM (ul > li)
+========================== */
+.listItem {
+  margin-bottom: 0.5rem;
+  transition: color 0.3s ease;
+  cursor: pointer;
+}
+
+.listItem:hover {
+  color: #ff782d;
+}
+
+/* =======================
+   SCROLL TO TOP BUTTON
+========================== */
+.scrollToTop {
+  position: fixed; /* ganti dari absolute ke fixed */
+  right: 1.5rem;
+  bottom: 1.5rem;
+  background-color: #000;
+  border-radius: 50%;
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  z-index: 999; /* pastikan di atas elemen lain */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scrollToTop:hover {
+  background-color: #ff782d;
+  transform: scale(1.05); /* efek membesar sedikit saat hover */
+}
+
+/* =======================
+   COPYRIGHT TEXT
+========================== */
+.copyright {
+  margin-top: 40px;
+  padding-top: 20px;
+}
+
+/* =======================
+   SOCIAL MEDIA ICONS
+========================== */
+.socialIcon {
+  color: #000;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.socialIcon:hover {
+  color: #ff782d;
+}
+
+.columnPaddingStart {
+  padding-left: 6rem; /* bisa disesuaikan: 1.5rem atau 2.5rem */
+}
+
+.footerContainer {
+  width: 100%;
+}

@@ -1,0 +1,45 @@
+/* tombol */
+.ask-button {
+  background-color: #ff782d;
+  border: none;
+  border-radius: 30px;
+  padding: 12px 24px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.ask-button:hover {
+  background-color: #e96b20;
+}
+
+/* Membuat tombol pagination jadi bulat */
+.pagination .page-item .page-link {
+  border-radius: 50% !important;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 6px;
+  font-weight: 500;
+  color: #333;
+  border: 1px solid #ddd;
+  transition: all 0.3s ease;
+}
+
+/* Saat aktif */
+.pagination .page-item.active .page-link {
+  background-color: black;
+  color: #fff;
+  border-color: black;
+}
+
+/* Saat hover */
+.pagination .page-item .page-link:hover {
+  background-color: black;
+  color: #fff;
+  border-color: black;
+}
