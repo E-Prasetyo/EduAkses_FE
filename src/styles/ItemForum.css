@@ -1,0 +1,62 @@
+/* Container utama 1 item forum */
+.forum-item {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: background-color 0.2s ease;
+}
+
+/* Hover effect (opsional) */
+.forum-item:hover {
+  background-color: #f8f8f8;
+  cursor: pointer;
+}
+
+/* Kiri: avatar + info teks */
+.forum-item-left {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Avatar user */
+.forum-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 16px;
+}
+
+/* Kontainer teks */
+.forum-info {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Judul pertanyaan */
+.forum-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: #000;
+}
+
+/* Detail penanya */
+.forum-meta {
+  font-size: 0.85rem;
+  color: #666666;
+  margin: 0;
+}
+
+/* Bagian kanan: jumlah balasan */
+.forum-reply-count {
+  font-size: 0.85rem;
+  color: #666666;
+  font-weight: 500;
+  white-space: nowrap;
+  padding-top: 6px;
+}
