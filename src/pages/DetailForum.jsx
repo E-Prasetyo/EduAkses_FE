@@ -1,12 +1,11 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "../styles/DetailForum.css"; // pastikan file ini sudah dibuat
+import "../styles/DetailForum.css";
 
 const DetailForum = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  // Jika data forum tidak tersedia (akses langsung via URL)
   if (!state) {
     return (
       <div className="text-center mt-5">
@@ -18,13 +17,28 @@ const DetailForum = () => {
     );
   }
 
-  // Destructuring data dari state
-  const { avatar, judul, nama, waktu, balasan } = state;
+  const { avatar, judul, detail, nama, waktu, balasan } = state;
+
+  // Data dummy balasan
+  const replies = [
+    {
+      id: 1,
+      avatar: "https://i.pravatar.cc/40?img=12",
+      nama: "Laura Haptur",
+      isi: "Ini adalah balasan pertama dari pengguna.",
+    },
+    {
+      id: 2,
+      avatar: "https://i.pravatar.cc/40?img=20",
+      nama: "Andi Prasetyo",
+      isi: "Ini adalah balasan kedua dari pengguna lainnya.",
+    },
+  ];
 
   return (
     <div className="container py-5">
       <div className="detail-forum-container p-4 rounded bg-white shadow-sm">
-        {/* Judul dan info penanya */}
+        {/* Header Forum */}
         <div className="d-flex align-items-start mb-4">
           <img
             src={avatar}
@@ -36,35 +50,39 @@ const DetailForum = () => {
           <div>
             <h4 className="fw-bold mb-1">{judul}</h4>
             <p className="text-muted mb-0">
-              Ditanyakan oleh {nama}, {waktu}
+              Ditanyakan oleh <strong>{nama}</strong>, {waktu}
             </p>
           </div>
         </div>
 
-        {/* Isi Pertanyaan */}
+        {/* Konten Pertanyaan */}
         <div className="bg-light p-3 rounded mb-4">
           <h6 className="fw-bold mb-2">Pertanyaan</h6>
-          <p className="mb-0">
-            Lorem ipsum dolor sit amet, ini adalah isi pertanyaannya.
-          </p>
+          <p className="mb-0">{detail}</p>
         </div>
 
-        {/* Daftar Balasan */}
+        {/* Balasan */}
         <div className="mb-4">
-          <h6 className="fw-bold mb-3">Balasan ({balasan})</h6>
+          <h6 className="fw-bold mb-3">Balasan ({replies.length})</h6>
 
-          <div className="mb-3">
-            <strong>Laura Haptur</strong>
-            <p>Ini adalah balasan pertama dari pengguna.</p>
-          </div>
-
-          <div className="mb-3">
-            <strong>Laura Haptur</strong>
-            <p>Ini adalah balasan kedua dari pengguna lainnya.</p>
-          </div>
+          {replies.map((reply) => (
+            <div className="d-flex mb-3" key={reply.id}>
+              <img
+                src={reply.avatar}
+                alt={reply.nama}
+                className="rounded-circle me-3"
+                width={40}
+                height={40}
+              />
+              <div>
+                <strong>{reply.nama}</strong>
+                <p className="mb-1">{reply.isi}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Tombol kembali */}
+        {/* Tombol Kembali */}
         <div className="text-end">
           <button
             className="btn btn-outline-secondary"

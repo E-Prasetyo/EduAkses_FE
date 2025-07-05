@@ -10,14 +10,15 @@ const AjukanPertanyaanModal = ({ show, onHide, onSubmit }) => {
 
     const newItem = {
       id: Date.now(),
-      avatar: "https://i.pravatar.cc/40", // dummy
+      avatar: "https://i.pravatar.cc/40",
       judul,
+      detail, // ✅ Tambahkan ini agar data tampil di DetailForum
       nama: "User",
       waktu: "Baru saja",
       balasan: 0,
     };
 
-    onSubmit(newItem);
+    onSubmit(newItem); // Kirim data lengkap
     setJudul("");
     setDetail("");
   };

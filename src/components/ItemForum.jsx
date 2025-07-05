@@ -1,20 +1,21 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/ItemForum.css"; // optional
+import "../styles/ItemForum.css";
 
-const ItemForum = ({ id, avatar, judul, nama, waktu, balasan }) => {
+const ItemForum = ({ id, avatar, judul, detail, nama, waktu, balasan }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/forum/${id}`);
+    navigate(`/forum/${id}`, {
+      state: { id, avatar, judul, detail, nama, waktu, balasan },
+    });
   };
 
   return (
     <div
       className="d-flex align-items-center justify-content-between p-3 border-bottom forum-item"
       onClick={handleClick}
-      style={{ cursor: "pointer" }} // agar ada efek pointer saat hover
-    >
+      style={{ cursor: "pointer" }}>
       <div className="d-flex align-items-start">
         <img
           src={avatar}
