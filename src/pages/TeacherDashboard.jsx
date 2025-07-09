@@ -221,7 +221,7 @@ const TeacherDashboard = () => {
             </div>
             <div className="col-lg-4 text-center">
               <div className="row g-2">
-                <div className="col-6">
+                {/* <div className="col-6">
                   <small>Total Kursus</small>
                   <div
                     className="bg-white bg-opacity-20 rounded"
@@ -230,6 +230,18 @@ const TeacherDashboard = () => {
                     <span style={{ color: "rgb(0, 0, 0)" }}>
                       {myCourses.length}
                     </span>
+                  </div>
+                </div> */}
+                <div className="col-6">
+                  <div className="bg-white bg-opacity-20 rounded p-3">
+                    <h3 className="h4 fw-bold mb-1">
+                      <span style={{ color: "rgb(0, 0, 0)" }}>
+                        {myCourses.length}
+                      </span>
+                    </h3>
+                    <small>
+                      <span style={{ color: "rgb(0, 0, 0)" }}>Total Kursus</span>
+                    </small>
                   </div>
                 </div>
                 <div className="col-6">
