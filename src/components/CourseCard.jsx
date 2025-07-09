@@ -39,7 +39,7 @@ const CourseCard = ({ course }) => {
         </p>
 
         <div className="d-flex align-items-center mb-3">
-          <div className="d-flex align-items-center me-3">
+          {/* <div className="d-flex align-items-center me-3">
             <svg
               width="16"
               height="16"
@@ -50,7 +50,7 @@ const CourseCard = ({ course }) => {
               <path d="M8 1L10.09 5.26L15 6L11.5 9.74L12.18 15L8 12.77L3.82 15L4.5 9.74L1 6L5.91 5.26L8 1Z" />
             </svg>
             <span className="small font-jost fw-medium">{course.rating}</span>
-          </div>
+          </div> */}
           <div className="d-flex align-items-center text-muted small">
             <svg
               width="14"
@@ -82,7 +82,7 @@ const CourseCard = ({ course }) => {
         </div>
 
         <div className="d-flex align-items-center justify-content-between">
-          {course.price === "free" ? (
+          {/* {course.price === "free" ? (
             <span className="h5 mb-0 text-edu-green font-exo fw-bold">
               GRATIS
             </span>
@@ -104,7 +104,7 @@ const CourseCard = ({ course }) => {
                 </span>
               )}
             </div>
-          )}
+          )} */}
 
           <Link
             to={`/kursus/${course.id}`}

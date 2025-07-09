@@ -279,7 +279,7 @@ const TeacherDashboard = () => {
       <main className="flex-grow-1 py-5">
         <div className="container">
           {/* Stats Cards */}
-          <div className="row g-4 mb-5">
+          <div className="row g-2 mb-5 justify-content-center">
             <div className="col-lg-3 col-md-6">
               <div className="card border-0 shadow-sm h-100">
                 <div className="card-body text-center p-4">
@@ -328,7 +328,7 @@ const TeacherDashboard = () => {
               </div>
             </div>
 
-            <div className="col-lg-3 col-md-6">
+            {/* <div className="col-lg-3 col-md-6">
               <div className="card border-0 shadow-sm h-100">
                 <div className="card-body text-center p-4">
                   <div
@@ -350,9 +350,9 @@ const TeacherDashboard = () => {
                   <p className="text-muted font-jost mb-0">Rating Rata-rata</p>
                 </div>
               </div>
-            </div>
+            </div> */}
 
-            <div className="col-lg-3 col-md-6">
+            {/* <div className="col-lg-3 col-md-6">
               <div className="card border-0 shadow-sm h-100">
                 <div className="card-body text-center p-4">
                   <div
@@ -374,7 +374,7 @@ const TeacherDashboard = () => {
                   <p className="text-muted font-jost mb-0">Total Views</p>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Tabs Navigation */}
@@ -399,7 +399,7 @@ const TeacherDashboard = () => {
                     📚 Kursus Saya
                   </button>
                 </li>
-                <li className="nav-item" role="presentation">
+                {/* <li className="nav-item" role="presentation">
                   <button
                     className={`nav-link ${activeTab === "analytics" ? "active" : ""}`}
                     onClick={() => setActiveTab("analytics")}
@@ -419,7 +419,7 @@ const TeacherDashboard = () => {
                       {notifications.filter((n) => !n.read).length}
                     </span>
                   </button>
-                </li>
+                </li> */}
               </ul>
             </div>
           </div>
@@ -551,7 +551,7 @@ const TeacherDashboard = () => {
                     </div>
 
                     {/* Recent Activity */}
-                    <div className="col-12">
+                    {/* <div className="col-12">
                       <div className="card border-0 shadow-sm">
                         <div className="card-header bg-white">
                           <h5 className="card-title mb-0 font-exo fw-semibold">
@@ -628,7 +628,7 @@ const TeacherDashboard = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>

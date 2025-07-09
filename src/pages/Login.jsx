@@ -237,7 +237,7 @@ const Login = () => {
                   </div>
 
                   {/* Social Login */}
-                  <div className="d-grid gap-2">
+                  {/* <div className="d-grid gap-2">
                     <button className="btn btn-outline-dark d-flex align-items-center justify-content-center gap-2 h-12">
                       <svg width="20" height="20" viewBox="0 0 24 24">
                         <path
@@ -259,7 +259,7 @@ const Login = () => {
                       </svg>
                       <span className="font-jost">Masuk dengan Google</span>
                     </button>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

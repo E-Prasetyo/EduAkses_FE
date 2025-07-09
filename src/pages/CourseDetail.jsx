@@ -394,7 +394,7 @@ const CourseDetail = () => {
                         👨‍🏫 Instruktur
                       </button>
                     </li>
-                    <li className="nav-item" role="presentation">
+                    {/* <li className="nav-item" role="presentation">
                       <button
                         className={`nav-link ${activeTab === "reviews" ? "active" : ""}`}
                         onClick={() => setActiveTab("reviews")}
@@ -402,7 +402,7 @@ const CourseDetail = () => {
                       >
                         ⭐ Ulasan
                       </button>
-                    </li>
+                    </li> */}
                   </ul>
                 </div>
               </div>
