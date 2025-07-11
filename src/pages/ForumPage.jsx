@@ -18,10 +18,6 @@ const ForumPage = () => {
       </Container>
 
       {/* Modal */}
-      <AjukanPertanyaanModal
-        show={showModal}
-        onHide={() => setShowModal(false)}
-      />
     </>
   );
 };
