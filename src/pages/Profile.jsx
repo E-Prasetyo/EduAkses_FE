@@ -218,7 +218,7 @@ const Profile = () => {
             <div className="col-lg-4">
               <div className="row g-4">
                 {/* Statistics */}
-                <div className="col-12">
+                {/* <div className="col-12">
                   <div className="card bg-edu-white-grey border-0">
                     <div className="card-body p-4">
                       <h3 className="h5 font-exo fw-semibold mb-4">
@@ -260,10 +260,10 @@ const Profile = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Quick Actions */}
-                <div className="col-12">
+                {/* <div className="col-12">
                   <div className="card bg-edu-white-grey border-0">
                     <div className="card-body p-4">
                       <h3 className="h5 font-exo fw-semibold mb-4">
@@ -285,7 +285,7 @@ const Profile = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Account Security */}
                 <div className="col-12">
