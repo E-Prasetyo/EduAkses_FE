@@ -29,7 +29,7 @@ const CourseDetail = () => {
     duration: "8 Jam",
     students: 1256,
     rating: 4.8,
-    reviews: 324,
+    review: 324,
     price: "free",
     originalPrice: 299000,
     level: "Pemula",
