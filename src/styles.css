@@ -1,0 +1,229 @@
+@import url("https://fonts.googleapis.com/css2?family=Exo:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600;700&display=swap");
+
+:root {
+  /* EduAkses Brand Colors - RED THEME */
+  --edu-primary: #dc3545;
+  --edu-green: #dc3545;
+  --edu-red: #dc3545;
+  --edu-light-grey: #e5e5e5;
+  --edu-dark-gray: #666666;
+  --edu-white-grey: #f8f9fa;
+
+  /* Bootstrap CSS Variables Override - RED THEME */
+  --bs-primary: #dc3545;
+  --bs-success: #dc3545;
+  --bs-danger: #dc3545;
+  --bs-light: #f8f9fa;
+  --bs-dark: #333333;
+}
+
+/* Font Families */
+.font-exo {
+  font-family: "Exo", sans-serif;
+}
+
+.font-jost {
+  font-family: "Jost", sans-serif;
+}
+
+/* Custom Bootstrap Component Overrides */
+.btn-edu-primary {
+  background-color: var(--edu-primary);
+  border-color: white;
+  color: white;
+}
+
+.btn-edu-primary:hover {
+  background-color: #b02a37;
+  border-color: #b02a37;
+  color: white;
+}
+
+.btn-edu-green {
+  background-color: var(--edu-green);
+  border-color: var(--edu-green);
+  color: white;
+}
+
+.btn-edu-green:hover {
+  background-color: #4a9e1f;
+  border-color: #4a9e1f;
+  color: white;
+}
+
+.bg-edu-primary {
+  background-color: var(--edu-primary) !important;
+}
+
+.bg-edu-green {
+  background-color: var(--edu-green) !important;
+}
+
+.bg-edu-red {
+  background-color: var(--edu-red) !important;
+}
+
+.bg-edu-white-grey {
+  background-color: var(--edu-white-grey) !important;
+}
+
+.text-edu-primary {
+  color: var(--edu-primary) !important;
+}
+
+.text-edu-green {
+  color: var(--edu-green) !important;
+}
+
+.text-edu-red {
+  color: var(--edu-red) !important;
+}
+
+.text-edu-dark-gray {
+  color: var(--edu-dark-gray) !important;
+}
+
+.border-edu-primary {
+  border-color: var(--edu-primary) !important;
+}
+
+.border-edu-light-grey {
+  border-color: var(--edu-light-grey) !important;
+}
+
+/* Custom utility classes */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.h-12 {
+  height: 3rem;
+}
+
+.h-10 {
+  height: 2.5rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+
+.rounded-3xl {
+  border-radius: 1.5rem;
+}
+
+/* Hero gradient - RED THEME */
+.hero-gradient {
+  background: linear-gradient(135deg, var(--edu-primary) 0%, #b02a37 100%);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom spacing */
+.gap-8 {
+  gap: 2rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+/* Hide scrollbar */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus styles - RED THEME */
+.form-control:focus {
+  border-color: var(--edu-primary);
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-select:focus {
+  border-color: var(--edu-primary);
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Custom navbar */
+.navbar-brand {
+  font-family: "Exo", sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Hover effects */
+.hover-text-primary:hover {
+  color: var(--edu-primary) !important;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+}
+
+/* TinyMCE editor styles */
+.tox .tox-editor-header {
+  border-color: var(--edu-light-grey) !important;
+}
+
+.tox .tox-toolbar__primary {
+  background: #f8f9fa !important;
+}
+
+/* Hide specific UI elements */
+.hide-rating,
+.hide-price,
+.hide-statistics,
+.hide-recent-activity,
+.hide-analytics,
+.hide-notifications,
+[data-hide="rating"],
+[data-hide="price"],
+[data-hide="statistics"],
+[data-hide="recent-activity"],
+[data-hide="analytics"],
+[data-hide="notifications"] {
+  display: none !important;
+}
+
+/* Red theme gradient backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%) !important;
+}
