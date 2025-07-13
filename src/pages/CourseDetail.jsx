@@ -238,11 +238,11 @@ const CourseDetail = () => {
                     oleh {course.instructor.name}
                   </p>
                   <div className="d-flex align-items-center gap-2">
-                    <div className="d-flex">
+                    {/* <div className="d-flex">
                       {renderStars(Math.floor(course.instructor.rating))}
-                    </div>
+                    </div> */}
                     <small className="text-light">
-                      {course.instructor.rating} •{" "}
+                      {/* {course.instructor.rating} •{" "} */}
                       {course.instructor.students.toLocaleString()} siswa
                     </small>
                   </div>
@@ -278,7 +278,7 @@ const CourseDetail = () => {
                     <span>{course.students.toLocaleString()} siswa</span>
                   </div>
                 </div>
-                <div className="col-auto">
+                {/* <div className="col-auto">
                   <div className="d-flex align-items-center text-light">
                     <div className="d-flex me-2">
                       {renderStars(Math.floor(course.rating))}
@@ -287,7 +287,7 @@ const CourseDetail = () => {
                       {course.rating} ({course.reviews.length} ulasan)
                     </span>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="d-flex align-items-center gap-4">
@@ -394,7 +394,7 @@ const CourseDetail = () => {
                         👨‍🏫 Instruktur
                       </button>
                     </li>
-                    <li className="nav-item" role="presentation">
+                    {/* <li className="nav-item" role="presentation">
                       <button
                         className={`nav-link ${activeTab === "reviews" ? "active" : ""}`}
                         onClick={() => setActiveTab("reviews")}
@@ -402,7 +402,7 @@ const CourseDetail = () => {
                       >
                         ⭐ Ulasan
                       </button>
-                    </li>
+                    </li> */}
                   </ul>
                 </div>
               </div>

@@ -210,9 +210,11 @@ const Profile = () => {
             <div className="col-12">
               <div className="card bg-edu-white-grey border-0">
                 <div className="card-body p-4">
-                  <h3 className="h5 font-exo fw-semibold mb-4">
-                    Aksi Cepat
-                  </h3>
+                  {user?.role === "teacher" && (
+                    <h3 className="h5 font-exo fw-semibold mb-4">
+                      Aksi Cepat
+                    </h3>
+                  )}
                   <div className="d-flex flex-column gap-2">
                     {user?.role === "teacher" && (
                       <>
@@ -224,9 +226,9 @@ const Profile = () => {
                         </button>
                       </>
                     )}
-                    <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
+                    {/* <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
                       ⚙️ Pengaturan Akun
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>
@@ -238,7 +240,7 @@ const Profile = () => {
                 <div className="card-body p-4">
                   <h3 className="h5 font-exo fw-semibold mb-4">Keamanan</h3>
                   <div className="d-flex flex-column gap-2">
-                    <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
+                    {/* <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
                       🔐 Ubah Password
                     </button>
                     <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
@@ -246,7 +248,7 @@ const Profile = () => {
                     </button>
                     <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
                       🔒 Log Aktivitas
-                    </button>
+                    </button> */}
                     <button
                       onClick={handleLogout}
                       className="btn btn-outline-danger text-start p-3 border-2 rounded font-jost"
