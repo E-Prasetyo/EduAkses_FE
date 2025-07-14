@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Container,
@@ -13,109 +13,43 @@ import {
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 
-const DetailForum = () => {
-  const { state } = useLocation();
-  const navigate = useNavigate();
+const getRelativeTime = (timestamp) => {
+  const now = new Date();
+  const posted = new Date(timestamp);
+  const diffSec = Math.floor((now - posted) / 1000);
+  if (diffSec < 60) return "baru saja";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} menit lalu`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
+  return `${Math.floor(diffSec / 86400)} hari lalu`;
+};
 
-  if (!state) {
-    return (
-      <Container className="text-center mt-5">
-        <p>Data forum tidak ditemukan.</p>
-        <Button variant="primary" onClick={() => navigate("/pages/Diskusi")}>
-          Kembali ke Forum
-        </Button>
-      </Container>
-    );
-  }
-
-  const { avatar, judul, detail, nama, waktu } = state;
-
-  const getRelativeTime = (timestamp) => {
-    const now = new Date();
-    const posted = new Date(timestamp);
-    const diffSec = Math.floor((now - posted) / 1000);
-    if (diffSec < 60) return "baru saja";
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} menit lalu`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} jam lalu`;
-    return `${Math.floor(diffSec / 86400)} hari lalu`;
-  };
-
-  const [replies, setReplies] = useState([]);
-  const [newReply, setNewReply] = useState("");
-  const [activeReply, setActiveReply] = useState(null);
-  const [replyTexts, setReplyTexts] = useState({});
-
-  const generateId = () => Math.floor(Math.random() * 1000000);
-
-  const handleSendReply = () => {
-    if (!newReply.trim()) return;
-    const replyBaru = {
-      id: generateId(),
-      avatar: "https://i.pravatar.cc/40?img=30",
-      nama: "Fulan",
-      isi: newReply.trim(),
-      waktu: new Date().toISOString(),
-      likes: 0,
-      replies: [],
-    };
-    setReplies([replyBaru, ...replies]);
-    setNewReply("");
-  };
-
-  const addNestedReply = (parentId, parentPath = []) => {
-    const replyText = replyTexts[parentId];
-    if (!replyText || !replyText.trim()) return;
-
-    const reply = {
-      id: generateId(),
-      avatar: "https://i.pravatar.cc/40?img=30",
-      nama: "Fulan",
-      isi: replyText.trim(),
-      waktu: new Date().toISOString(),
-      likes: 0,
-      replies: [],
-    };
-
-    const updateReplies = (items, path, newReply) => {
-      if (path.length === 0) {
-        const item = items.find((item) => item.id === parentId);
-        if (item) item.replies.push(newReply);
-        return;
-      }
-      const [currentId, ...rest] = path;
-      const currentItem = items.find((item) => item.id === currentId);
-      if (currentItem) updateReplies(currentItem.replies, rest, newReply);
-    };
-
-    const newReplies = [...replies];
-    updateReplies(newReplies, parentPath, reply);
-
-    setReplies(newReplies);
-    setReplyTexts({ ...replyTexts, [parentId]: "" });
-    setActiveReply(null);
-  };
-
-  const toggleLike = (replyId, parentPath = []) => {
-    const updateLikes = (items, path) => {
-      if (path.length === 0) {
-        const item = items.find((item) => item.id === replyId);
-        if (item) item.likes += 1;
-        return;
-      }
-      const [currentId, ...rest] = path;
-      const currentItem = items.find((item) => item.id === currentId);
-      if (currentItem) updateLikes(currentItem.replies, rest);
-    };
-
-    const newReplies = [...replies];
-    updateLikes(newReplies, parentPath);
-    setReplies(newReplies);
-  };
-
-  const ReplyComponent = ({ reply, depth = 0, parentPath = [] }) => {
+// Pindahkan ReplyComponent keluar dari komponen utama
+const ReplyComponent = React.memo(
+  ({
+    reply,
+    depth = 0,
+    parentPath = [],
+    activeReply,
+    setActiveReply,
+    replyTexts,
+    setReplyTexts,
+    toggleLike,
+    addNestedReply,
+  }) => {
     const currentPath = [...parentPath, reply.id];
     const isReplying = activeReply === reply.id;
     const marginLeft = depth > 0 ? `${depth * 3}rem` : "0";
+
+    const handleReplyTextChange = useCallback(
+      (e) => {
+        const value = e.target.value;
+        setReplyTexts((prev) => ({
+          ...prev,
+          [reply.id]: value,
+        }));
+      },
+      [reply.id, setReplyTexts]
+    );
 
     return (
       <div style={{ marginLeft, marginTop: depth > 0 ? "1rem" : "0" }}>
@@ -186,12 +120,7 @@ const DetailForum = () => {
                     rows={3}
                     placeholder="Tulis balasan..."
                     value={replyTexts[reply.id] || ""}
-                    onChange={(e) =>
-                      setReplyTexts({
-                        ...replyTexts,
-                        [reply.id]: e.target.value,
-                      })
-                    }
+                    onChange={handleReplyTextChange}
                   />
                 </Form.Group>
                 <div className="d-flex gap-2">
@@ -221,11 +150,133 @@ const DetailForum = () => {
               reply={nestedReply}
               depth={depth + 1}
               parentPath={currentPath}
+              activeReply={activeReply}
+              setActiveReply={setActiveReply}
+              replyTexts={replyTexts}
+              setReplyTexts={setReplyTexts}
+              toggleLike={toggleLike}
+              addNestedReply={addNestedReply}
             />
           ))}
       </div>
     );
-  };
+  }
+);
+
+const DetailForum = () => {
+  const { state } = useLocation();
+  const navigate = useNavigate();
+
+  if (!state) {
+    return (
+      <Container className="text-center mt-5">
+        <p>Data forum tidak ditemukan.</p>
+        <Button variant="primary" onClick={() => navigate("/pages/Diskusi")}>
+          Kembali ke Forum
+        </Button>
+      </Container>
+    );
+  }
+
+  const { avatar, judul, detail, nama, waktu } = state;
+
+  const [replies, setReplies] = useState([]);
+  const [newReply, setNewReply] = useState("");
+  const [activeReply, setActiveReply] = useState(null);
+  const [replyTexts, setReplyTexts] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const generateId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+  const handleNewReplyChange = useCallback((e) => {
+    setNewReply(e.target.value);
+  }, []);
+
+  const handleSendReply = useCallback(async () => {
+    if (!newReply.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const replyBaru = {
+        id: generateId(),
+        avatar: "https://i.pravatar.cc/40?img=30",
+        nama: "Fulan",
+        isi: newReply.trim(),
+        waktu: new Date().toISOString(),
+        likes: 0,
+        replies: [],
+      };
+
+      setReplies((prev) => [replyBaru, ...prev]);
+      setNewReply("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [newReply, isSubmitting]);
+
+  const addNestedReply = useCallback(
+    (parentId, parentPath = []) => {
+      const replyText = replyTexts[parentId];
+      if (!replyText || !replyText.trim() || isSubmitting) return;
+
+      setIsSubmitting(true);
+
+      try {
+        const reply = {
+          id: generateId(),
+          avatar: "https://i.pravatar.cc/40?img=30",
+          nama: "Fulan",
+          isi: replyText.trim(),
+          waktu: new Date().toISOString(),
+          likes: 0,
+          replies: [],
+        };
+
+        const updateReplies = (items, path, newReply) => {
+          if (path.length === 0) {
+            const item = items.find((item) => item.id === parentId);
+            if (item) item.replies.push(newReply);
+            return;
+          }
+          const [currentId, ...rest] = path;
+          const currentItem = items.find((item) => item.id === currentId);
+          if (currentItem) updateReplies(currentItem.replies, rest, newReply);
+        };
+
+        setReplies((prev) => {
+          const newReplies = [...prev];
+          updateReplies(newReplies, parentPath, reply);
+          return newReplies;
+        });
+
+        setReplyTexts((prev) => ({ ...prev, [parentId]: "" }));
+        setActiveReply(null);
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [replyTexts, isSubmitting]
+  );
+
+  const toggleLike = useCallback((replyId, parentPath = []) => {
+    const updateLikes = (items, path) => {
+      if (path.length === 0) {
+        const item = items.find((item) => item.id === replyId);
+        if (item) item.likes += 1;
+        return;
+      }
+      const [currentId, ...rest] = path;
+      const currentItem = items.find((item) => item.id === currentId);
+      if (currentItem) updateLikes(currentItem.replies, rest);
+    };
+
+    setReplies((prev) => {
+      const newReplies = [...prev];
+      updateLikes(newReplies, parentPath);
+      return newReplies;
+    });
+  }, []);
 
   return (
     <>
@@ -270,16 +321,33 @@ const DetailForum = () => {
                     Balasan ({replies.length})
                   </h5>
                   <Badge bg="primary">
-                    {replies.reduce(
-                      (total, r) => total + 1 + r.replies.length,
-                      0
-                    )}{" "}
+                    {replies.reduce((total, r) => {
+                      const countNestedReplies = (reply) => {
+                        let count = 1;
+                        if (reply.replies && reply.replies.length > 0) {
+                          reply.replies.forEach((nestedReply) => {
+                            count += countNestedReplies(nestedReply);
+                          });
+                        }
+                        return count;
+                      };
+                      return total + countNestedReplies(r);
+                    }, 0)}{" "}
                     Total Komentar
                   </Badge>
                 </div>
 
                 {replies.map((reply) => (
-                  <ReplyComponent key={reply.id} reply={reply} />
+                  <ReplyComponent
+                    key={reply.id}
+                    reply={reply}
+                    activeReply={activeReply}
+                    setActiveReply={setActiveReply}
+                    replyTexts={replyTexts}
+                    setReplyTexts={setReplyTexts}
+                    toggleLike={toggleLike}
+                    addNestedReply={addNestedReply}
+                  />
                 ))}
 
                 <div className="text-end mt-4">
@@ -302,19 +370,21 @@ const DetailForum = () => {
                 <Form>
                   <Form.Group className="mb-3">
                     <Form.Control
+                      key="main-reply-textarea"
                       as="textarea"
                       rows={4}
                       placeholder="Tuliskan komentar Anda..."
                       value={newReply}
-                      onChange={(e) => setNewReply(e.target.value)}
+                      onChange={handleNewReplyChange}
                     />
                   </Form.Group>
                   <div className="d-flex justify-content-end">
                     <Button
                       variant="warning"
                       onClick={handleSendReply}
-                      disabled={!newReply.trim()}>
-                      <i className="fas fa-paper-plane me-2"></i>Kirim Balasan
+                      disabled={!newReply.trim() || isSubmitting}>
+                      <i className="fas fa-paper-plane me-2"></i>
+                      {isSubmitting ? "Mengirim..." : "Kirim Balasan"}
                     </Button>
                   </div>
                 </Form>
