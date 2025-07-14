@@ -27,6 +27,7 @@ import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import Quiz from "./pages/Quiz";
 import Diskusi from "./pages/Diskusi";
+import DetailForum from "./pages/DetailForum";
 
 // Student Pages
 import StudentDashboard from "./pages/StudentDashboard";
@@ -91,6 +92,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Diskusi />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/:id"
+              element={
+                <ProtectedRoute>
+                  <DetailForum />
                 </ProtectedRoute>
               }
             />
@@ -194,5 +203,5 @@ const App = () => (
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
