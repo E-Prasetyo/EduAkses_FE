@@ -229,7 +229,6 @@ const DetailForum = () => {
 
   return (
     <>
-      <Header />
       <div className="bg-dark text-white py-5">
         <Container>
           <Row className="align-items-center">
