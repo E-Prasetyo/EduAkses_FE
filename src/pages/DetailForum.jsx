@@ -65,7 +65,7 @@ const ReplyComponent = React.memo(
               <div className="flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <div>
-                    <strong className="text-primary">{reply.nama}</strong>
+                    <strong className="text-danger">{reply.nama}</strong>
                     <small className="text-muted ms-2">
                       {getRelativeTime(reply.waktu)}
                     </small>
@@ -180,7 +180,18 @@ const DetailForum = () => {
 
   const { avatar, judul, detail, nama, waktu } = state;
 
-  const [replies, setReplies] = useState([]);
+  const [replies, setReplies] = useState([
+    {
+      id: 1,
+      avatar: "https://i.pravatar.cc/40?img=12",
+      nama: "Laura Haptur",
+      isi: "Ini adalah balasan pertama.",
+      waktu: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+      likes: 0,
+      replies: [],
+    },
+  ]);
+
   const [newReply, setNewReply] = useState("");
   const [activeReply, setActiveReply] = useState(null);
   const [replyTexts, setReplyTexts] = useState({});
@@ -222,60 +233,64 @@ const DetailForum = () => {
 
       setIsSubmitting(true);
 
-      try {
-        const reply = {
-          id: generateId(),
-          avatar: "https://i.pravatar.cc/40?img=30",
-          nama: "Fulan",
-          isi: replyText.trim(),
-          waktu: new Date().toISOString(),
-          likes: 0,
-          replies: [],
-        };
+      const newReply = {
+        id: generateId(),
+        avatar: "https://i.pravatar.cc/40?img=30",
+        nama: "Fulan",
+        isi: replyText.trim(),
+        waktu: new Date().toISOString(),
+        likes: 0,
+        replies: [],
+      };
 
-        const updateReplies = (items, path, newReply) => {
-          if (path.length === 0) {
-            const item = items.find((item) => item.id === parentId);
-            if (item) item.replies.push(newReply);
-            return;
-          }
-          const [currentId, ...rest] = path;
-          const currentItem = items.find((item) => item.id === currentId);
-          if (currentItem) updateReplies(currentItem.replies, rest, newReply);
-        };
+      const updateReplies = (repliesArray, path) => {
+        if (path.length === 0) {
+          return repliesArray.map((item) =>
+            item.id === parentId
+              ? { ...item, replies: [...item.replies, newReply] }
+              : item
+          );
+        }
 
-        setReplies((prev) => {
-          const newReplies = [...prev];
-          updateReplies(newReplies, parentPath, reply);
-          return newReplies;
-        });
+        const [currentId, ...rest] = path;
+        return repliesArray.map((item) =>
+          item.id === currentId
+            ? {
+                ...item,
+                replies: updateReplies(item.replies || [], rest),
+              }
+            : item
+        );
+      };
 
-        setReplyTexts((prev) => ({ ...prev, [parentId]: "" }));
-        setActiveReply(null);
-      } finally {
-        setIsSubmitting(false);
-      }
+      setReplies((prevReplies) => updateReplies(prevReplies, parentPath));
+      setReplyTexts((prev) => ({ ...prev, [parentId]: "" }));
+      setActiveReply(null);
+      setIsSubmitting(false);
     },
     [replyTexts, isSubmitting]
   );
 
   const toggleLike = useCallback((replyId, parentPath = []) => {
-    const updateLikes = (items, path) => {
+    const updateLikes = (repliesArray, path) => {
       if (path.length === 0) {
-        const item = items.find((item) => item.id === replyId);
-        if (item) item.likes += 1;
-        return;
+        return repliesArray.map((item) =>
+          item.id === replyId ? { ...item, likes: item.likes + 1 } : item
+        );
       }
+
       const [currentId, ...rest] = path;
-      const currentItem = items.find((item) => item.id === currentId);
-      if (currentItem) updateLikes(currentItem.replies, rest);
+      return repliesArray.map((item) =>
+        item.id === currentId
+          ? {
+              ...item,
+              replies: updateLikes(item.replies || [], rest),
+            }
+          : item
+      );
     };
 
-    setReplies((prev) => {
-      const newReplies = [...prev];
-      updateLikes(newReplies, parentPath);
-      return newReplies;
-    });
+    setReplies((prevReplies) => updateLikes(prevReplies, parentPath));
   }, []);
 
   return (
@@ -308,9 +323,11 @@ const DetailForum = () => {
           <Col>
             <Card className="shadow-sm mb-4">
               <Card.Body>
-                <h4 className="text-primary mb-3">
-                  <i className="fas fa-question-circle me-2"></i>Pertanyaan
+                <h4 className="text-danger mb-3">
+                  <i className="fas fa-question-circle me-2 text-danger"></i>
+                  Pertanyaan
                 </h4>
+
                 <p className="lead">{detail}</p>
 
                 <hr />
@@ -320,7 +337,7 @@ const DetailForum = () => {
                     <i className="fas fa-comments me-2"></i>
                     Balasan ({replies.length})
                   </h5>
-                  <Badge bg="primary">
+                  <Badge bg="danger" className="py-2 px-3">
                     {replies.reduce((total, r) => {
                       const countNestedReplies = (reply) => {
                         let count = 1;
@@ -361,7 +378,7 @@ const DetailForum = () => {
             </Card>
 
             <Card className="shadow-sm">
-              <Card.Header className="bg-primary text-white">
+              <Card.Header className="bg-danger  text-white">
                 <h5 className="mb-0">
                   <i className="fas fa-plus-circle me-2"></i>Tambah Balasan
                 </h5>
