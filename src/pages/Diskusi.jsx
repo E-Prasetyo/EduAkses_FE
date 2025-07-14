@@ -1,8 +1,5 @@
-import React from "react";
-import Header from "../components/Header";
 import ListForum from "../components/ListForum";
-import AjukanPertanyaanModal from "../components/AjukanPertanyaanModal";
-import Footer from "../components/Footer";
+
 import { Container } from "react-bootstrap";
 
 const Diskusi = () => {
@@ -26,8 +23,6 @@ const Diskusi = () => {
           </Container>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

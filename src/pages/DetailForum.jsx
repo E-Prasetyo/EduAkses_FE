@@ -10,8 +10,7 @@ import {
   Badge,
   Dropdown,
 } from "react-bootstrap";
-import Footer from "../components/Footer";
-import Header from "../components/Header";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 const getRelativeTime = (timestamp) => {
   const now = new Date();
@@ -65,7 +64,7 @@ const ReplyComponent = React.memo(
               <div className="flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <div>
-                    <strong className="text-danger">{reply.nama}</strong>
+                    <strong className="text-dark">{reply.nama}</strong>
                     <small className="text-muted ms-2">
                       {getRelativeTime(reply.waktu)}
                     </small>
@@ -87,14 +86,13 @@ const ReplyComponent = React.memo(
                 <p className="mb-3">{reply.isi}</p>
 
                 <div className="d-flex gap-3">
-                  <Button
-                    variant="outline-danger"
-                    size="sm"
+                  <span
                     onClick={() => toggleLike(reply.id, parentPath)}
-                    className="d-flex align-items-center">
-                    <i className="fas fa-heart me-1"></i>
+                    className="d-flex align-items-center gap-1 text-danger"
+                    style={{ cursor: "pointer", fontSize: "1rem" }}>
+                    <i className="bi bi-heart-fill"></i>
                     {reply.likes}
-                  </Button>
+                  </span>
 
                   <Button
                     variant="outline-primary"

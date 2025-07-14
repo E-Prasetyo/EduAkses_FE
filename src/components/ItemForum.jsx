@@ -10,7 +10,7 @@ const ItemForum = ({ id, avatar, judul, detail, nama, waktu, balasan }) => {
           <img
             src={avatar}
             alt="Avatar"
-            className="rounded-circle m-3"
+            className="rounded-circle m-4"
             style={{ width: "48px", height: "48px", objectFit: "cover" }}
           />
         </div>
@@ -19,7 +19,7 @@ const ItemForum = ({ id, avatar, judul, detail, nama, waktu, balasan }) => {
         <div className="col">
           <div className="card-body py-3 pe-3">
             <div className="d-flex justify-content-between align-items-start">
-              <div className="flex-grow-1">
+              <div className="flex-grow-1 mb-4 mt-3">
                 <h6 className="fw-semibold mb-1">
                   <Link
                     to={`/forum/${id}`}
