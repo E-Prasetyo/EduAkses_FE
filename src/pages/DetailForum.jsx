@@ -368,7 +368,7 @@ const DetailForum = () => {
                 <div className="text-end mt-4">
                   <Button
                     variant="outline-secondary"
-                    onClick={() => navigate("/")}>
+                    onClick={() => navigate("/diskusi")}>
                     Kembali ke Forum
                   </Button>
                 </div>
