@@ -10,13 +10,27 @@ const Header = () => {
 
   useEffect(() => {
     // Initialize Bootstrap dropdown
-    if (typeof window !== 'undefined' && window.bootstrap) {
-      const dropdownElement = dropdownRef.current;
-      if (dropdownElement) {
-        new window.bootstrap.Dropdown(dropdownElement);
+    const initializeDropdown = () => {
+      if (typeof window !== 'undefined' && window.bootstrap) {
+        const dropdownElement = dropdownRef.current;
+        if (dropdownElement) {
+          try {
+            new window.bootstrap.Dropdown(dropdownElement);
+          } catch (error) {
+            console.error("Error initializing dropdown:", error);
+          }
+        }
       }
-    }
-  }, []);
+    };
+    
+    // Try to initialize immediately
+    initializeDropdown();
+    
+    // Also set a timeout as a fallback to ensure bootstrap is loaded
+    const timer = setTimeout(initializeDropdown, 500);
+    
+    return () => clearTimeout(timer);
+  }, [user]); // Re-initialize when user changes
 
   const isActiveRoute = (path) => {
     return location.pathname === path;
@@ -118,13 +132,20 @@ const Header = () => {
                   data-bs-auto-close="true"
                   aria-expanded="false"
                 >
-                  <img
-                    src={user.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face"}
-                    alt="Profile"
-                    className="rounded-circle me-2"
-                    width="40"
-                    height="40"
-                  />
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt="Profile"
+                      className="rounded-circle me-2"
+                      width="40"
+                      height="40"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="rounded-circle bg-light border me-2 d-flex align-items-center justify-content-center text-secondary" style={{ width: 40, height: 40, fontWeight: 600, fontSize: 12 }}>
+                      Foto Profil
+                    </div>
+                  )}
                   <span className="font-jost fw-medium text-dark">
                     {user.name}
                   </span>

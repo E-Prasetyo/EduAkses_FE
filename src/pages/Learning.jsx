@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { localStorageService } from "../services/localStorageService";
+import { useAuth } from "../contexts/AuthContext";
+
+// Helper function to extract YouTube video ID
+const extractYouTubeVideoId = (url) => {
+  if (!url) return null;
+  
+  // If it's already just an ID (11 characters)
+  if (url.length === 11 && !url.includes('/') && !url.includes('.')) {
+    return url;
+  }
+  
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  
+  return match && match[2].length === 11 ? match[2] : null;
+};
 
 const Learning = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { courseId } = useParams();
+  const [course, setCourse] = useState(null);
   const [currentModule, setCurrentModule] = useState(0);
   const [currentLesson, setCurrentLesson] = useState(0);
-  const [completedLessons, setCompletedLessons] = useState(new Set());
+  const [completedLessons, setCompletedLessons] = useState([]);
+  const [completedQuizzes, setCompletedQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Quiz state
@@ -18,116 +37,157 @@ const Learning = () => {
     isCompleted: false
   });
 
-  // Mock course data (same as before)
-  const course = {
-    id: id,
-    title: "Dasar-Dasar Komputer dan Internet",
-    modules: [
-      {
-        id: 1,
-        title: "Pengenalan Komputer",
-        lessons: [
-          {
-            id: 1,
-            title: "Apa itu Komputer?",
-            type: "video",
-            content: "dQw4w9WgXcQ",
-            duration: "15 menit",
-            description: "Pengenalan dasar tentang komputer dan sejarahnya",
-          },
-          {
-            id: 2,
-            title: "Komponen Komputer",
-            type: "text",
-            content: `
-              <h2>Komponen Utama Komputer</h2>
-              <p>Komputer terdiri dari beberapa komponen utama yang bekerja sama untuk menjalankan berbagai tugas.</p>
-            `,
-            duration: "20 menit",
-            description: "Mempelajari komponen-komponen utama dalam komputer",
-          },
-          {
-            id: 3,
-            title: "Cara Kerja Komputer",
-            type: "video",
-            content: "dQw4w9WgXcQ",
-            duration: "12 menit",
-            description: "Memahami bagaimana komputer memproses informasi",
-          }
-        ],
-        quizzes: [
-          {
-            id: 1,
-            title: "Kuis Pengenalan Komputer",
-            timeLimit: 600,
-            questions: 5,
-            passingScore: 70
-          }
-        ]
-      },
-      {
-        id: 2,
-        title: "Sistem Operasi",
-        lessons: [
-          {
-            id: 4,
-            title: "Pengenalan Sistem Operasi",
-            type: "text",
-            content: `
-              <h2>Apa itu Sistem Operasi?</h2>
-              <p>Sistem operasi adalah perangkat lunak sistem yang mengelola sumber daya komputer.</p>
-            `,
-            duration: "18 menit",
-            description: "Memahami peran dan fungsi sistem operasi",
-          },
-          {
-            id: 5,
-            title: "Interface Pengguna",
-            type: "video",
-            content: "dQw4w9WgXcQ",
-            duration: "25 menit",
-            description: "Mempelajari berbagai jenis antarmuka pengguna",
-          }
-        ],
-        quizzes: [
-          {
-            id: 2,
-            title: "Kuis Sistem Operasi",
-            timeLimit: 600,
-            questions: 5,
-            passingScore: 70
-          }
-        ]
-      }
-    ]
-  };
-
-  // Compute total lessons and last lesson status
-  const totalLessons = course?.modules.reduce((acc, module) => acc + module.lessons.length, 0) || 0;
-  const isLastLesson = currentModule === course?.modules.length - 1 && 
-                      currentLesson === course?.modules[currentModule].lessons.length - 1;
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Load progress from localStorage
-    const savedProgress = localStorage.getItem(`course_${id}_progress`);
-    if (savedProgress) {
-      const { completedLessons: saved } = JSON.parse(savedProgress);
-      setCompletedLessons(new Set(saved));
+    setLoading(true);
+    const foundCourse = localStorageService.getCourseById(courseId);
+    if (!foundCourse) {
+      setCourse(null);
+      setLoading(false);
+      return;
     }
+    setCourse(foundCourse);
+    // Ambil progress user
+    const progress = localStorageService.getCourseProgress(user.id, courseId);
+    setCompletedLessons(progress.completedLessons || []);
+    setCompletedQuizzes(progress.completedQuizzes || []);
     setLoading(false);
-  }, [id]);
+  }, [courseId, user]);
 
+  // Fungsi untuk mengecek apakah semua lesson dalam module sudah selesai
+  const isModuleCompleted = (moduleIndex) => {
+    const module = course?.modules[moduleIndex];
+    if (!module || !module.lessons) return false;
+    
+    return module.lessons.every((_, lessonIndex) => 
+      completedLessons.includes(`${moduleIndex}-${lessonIndex}`)
+    );
+  };
+
+  // Fungsi untuk mengecek apakah quiz dalam module sudah lulus
+  const isModuleQuizPassed = (moduleIndex) => {
+    const module = course?.modules[moduleIndex];
+    if (!module || !module.quizzes || module.quizzes.length === 0) return true;
+    
+    return module.quizzes.some(quiz => 
+      completedQuizzes.includes(`${moduleIndex}-${quiz.id}`)
+    );
+  };
+
+  // Fungsi untuk mengecek apakah module bisa ditandai selesai
+  const canMarkModuleComplete = (moduleIndex) => {
+    return isModuleCompleted(moduleIndex) && isModuleQuizPassed(moduleIndex);
+  };
+
+  // Fungsi untuk mengecek apakah lesson bisa ditandai selesai
+  const canMarkLessonComplete = (moduleIndex, lessonIndex) => {
+    return true;
+  };
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+  if (!course) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="alert alert-danger">Kursus tidak ditemukan atau sudah dihapus.</div>
+      </div>
+    );
+  }
+  if (!course.modules || course.modules.length === 0) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="alert alert-warning">Belum ada modul pada kursus ini.</div>
+      </div>
+    );
+  }
+  const totalLessons = course.modules.reduce((acc, module) => acc + (module.lessons ? module.lessons.length : 0), 0);
+  const totalQuizzes = course.modules.reduce((acc, module) => acc + (module.quizzes ? module.quizzes.length : 0), 0);
+  const totalItems = totalLessons + totalQuizzes;
+  
+  // Hitung progress yang benar termasuk quiz
+  const calculateProgress = () => {
+    let completedItems = completedLessons.length;
+    
+    // Tambahkan quiz yang sudah lulus
+    course.modules.forEach((module, moduleIndex) => {
+      if (module.quizzes) {
+        module.quizzes.forEach(quiz => {
+          if (completedQuizzes.includes(`${moduleIndex}-${quiz.id}`)) {
+            completedItems++;
+          }
+        });
+      }
+    });
+    
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  };
+  
+  // Recalculate progress when completedLessons or completedQuizzes change
+  const currentProgress = calculateProgress();
+  
   const currentModuleData = course.modules[currentModule];
+  if (!currentModuleData || !currentModuleData.lessons || currentModuleData.lessons.length === 0) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="alert alert-warning">Belum ada pelajaran pada modul ini.</div>
+      </div>
+    );
+  }
   const currentLessonData = currentModuleData.lessons[currentLesson];
+  
+  // Debug: Log current lesson data
+  console.log('Current Lesson Data:', currentLessonData);
+  console.log('Lesson Type:', currentLessonData?.type);
+  console.log('Video URL:', currentLessonData?.videoUrl);
+  console.log('Text Content:', currentLessonData?.textContent);
+  console.log('Full Course Data:', course);
+  console.log('Current Module Index:', currentModule);
+  console.log('Current Lesson Index:', currentLesson);
+  console.log('Extracted Video ID:', currentLessonData?.videoUrl ? extractYouTubeVideoId(currentLessonData.videoUrl) : 'No video URL');
+  console.log('Current Module Quizzes:', currentModuleData.quizzes);
+  console.log('All Course Modules:', course?.modules?.map((m, i) => ({ index: i, title: m.title, quizzes: m.quizzes?.length || 0 })));
+  
+  // Deklarasikan isLastLesson sebelum return utama
+  const isLastLesson =
+    currentModule === course.modules.length - 1 &&
+    currentLesson === currentModuleData.lessons.length - 1;
 
   const markAsComplete = () => {
+    // Cek apakah lesson bisa ditandai selesai
+    if (!canMarkLessonComplete(currentModule, currentLesson)) {
+      alert("Anda harus menyelesaikan quiz terlebih dahulu sebelum menandai lesson ini selesai!");
+      return;
+    }
+    
     const lessonKey = `${currentModule}-${currentLesson}`;
-    setCompletedLessons(prev => new Set([...prev, lessonKey]));
-    saveProgress();
+    if (!completedLessons.includes(lessonKey)) {
+      const newCompleted = [...completedLessons, lessonKey];
+      setCompletedLessons(newCompleted);
+      // Simpan progress ke localStorage
+      localStorageService.updateProgress(
+        user.id, 
+        courseId, 
+        currentProgress, 
+        newCompleted,
+        completedQuizzes
+      );
+    }
   };
 
   const isLessonCompleted = (moduleIndex, lessonIndex) => {
-    return completedLessons.has(`${moduleIndex}-${lessonIndex}`);
+    return completedLessons.includes(`${moduleIndex}-${lessonIndex}`);
+  };
+
+  const isQuizCompleted = (moduleIndex, quizId) => {
+    return completedQuizzes.includes(`${moduleIndex}-${quizId}`);
   };
 
   const navigateToLesson = (moduleIndex, lessonIndex) => {
@@ -151,8 +211,9 @@ const Learning = () => {
       // If this is the last lesson and all lessons are completed, navigate to the quiz
       if (currentModuleData.quizzes && 
           currentModuleData.quizzes.length > 0 && 
-          currentModuleData.lessons.every((_, idx) => isLessonCompleted(currentModule, idx))) {
-        navigate(`/kursus/${id}/modul/${currentModule + 1}/kuis/${currentModuleData.quizzes[0].id}`);
+          isModuleCompleted(currentModule) && 
+          !isModuleQuizPassed(currentModule)) {
+        navigate(`/kuis/${courseId}/${currentModuleData.quizzes[0].id}`);
       } else if (currentModule < course.modules.length - 1) {
         // If there's no quiz or lessons aren't completed, move to next module
         setCurrentModule(currentModule + 1);
@@ -177,34 +238,53 @@ const Learning = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  // Fungsi untuk mendapatkan teks tombol selanjutnya
+  const getNextButtonText = () => {
+    if (isLastLesson) {
+      if (currentModuleData.quizzes && 
+          currentModuleData.quizzes.length > 0 && 
+          isModuleCompleted(currentModule) && 
+          !isModuleQuizPassed(currentModule)) {
+        return 'Mulai Kuis';
+      } else if (currentModule < course.modules.length - 1) {
+        return 'Modul Selanjutnya';
+      } else {
+        return 'Selesai Kursus';
+      }
+    } else {
+      return 'Selanjutnya';
+    }
+  };
+
+  // Fungsi untuk mengecek apakah tombol selanjutnya bisa diklik
+  const canProceedToNext = () => {
+    if (isLastLesson) {
+      if (currentModuleData.quizzes && 
+          currentModuleData.quizzes.length > 0) {
+        return isModuleCompleted(currentModule);
+      }
+      return true;
+    }
+    return true;
+  };
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light">
-      <Header />
-
       <div className="d-flex flex-grow-1">
         {/* Sidebar - Course Navigation */}
         <div className="bg-white border-end" style={{ width: '320px', height: 'calc(100vh - 72px)', overflowY: 'auto' }}>
           <div className="p-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
-              <Link
-                to={`/kursus/${id}`}
+              <button
+                type="button"
                 className="btn btn-outline-primary btn-sm"
+                onClick={() => navigate(-1)}
               >
                 <i className="bi bi-arrow-left me-2"></i>
                 Kembali
-              </Link>
+              </button>
               <span className="badge bg-primary">
-                {completedLessons.size}/{totalLessons} Selesai
+                {completedLessons.length + completedQuizzes.length}/{totalItems} Selesai
               </span>
             </div>
 
@@ -223,7 +303,9 @@ const Learning = () => {
                       <div className="d-flex align-items-center justify-content-between w-100">
                         <span>{module.title}</span>
                         <small className="badge bg-primary ms-2">
-                          {module.lessons.filter((_, idx) => isLessonCompleted(moduleIndex, idx)).length}/{module.lessons.length}
+                          {module.lessons.filter((_, idx) => isLessonCompleted(moduleIndex, idx)).length + 
+                          (module.quizzes ? module.quizzes.filter(quiz => isQuizCompleted(moduleIndex, quiz.id)).length : 0)}/
+                         {module.lessons.length + (module.quizzes ? module.quizzes.length : 0)}
                         </small>
                       </div>
                     </button>
@@ -283,12 +365,23 @@ const Learning = () => {
                         {module.quizzes && module.quizzes.map((quiz) => (
                           <Link
                             key={quiz.id}
-                            to={`/kursus/${id}/modul/${moduleIndex + 1}/kuis/${quiz.id}`}
-                            className="list-group-item list-group-item-action d-flex align-items-center"
+                            to={`/kuis/${courseId}/${quiz.id}`}
+                            className={`list-group-item list-group-item-action d-flex align-items-center ${
+                              isQuizCompleted(moduleIndex, quiz.id) ? 'disabled' : ''
+                            }`}
                           >
                             <div className="me-3">
-                              <div className="badge bg-warning text-dark">
-                                <i className="bi bi-journal-check"></i>
+                              <div className={`badge ${
+                                isQuizCompleted(moduleIndex, quiz.id) 
+                                  ? 'bg-success text-white' 
+                                  : isModuleCompleted(moduleIndex)
+                                  ? 'bg-warning text-dark'
+                                  : 'bg-secondary text-white'
+                              }`}>
+                                {isQuizCompleted(moduleIndex, quiz.id) 
+                                  ? '✓' 
+                                  : <i className="bi bi-journal-check"></i>
+                                }
                               </div>
                             </div>
                             <div>
@@ -296,7 +389,8 @@ const Learning = () => {
                                 {quiz.title}
                               </div>
                               <small className="text-muted">
-                                {quiz.questions} Soal • {quiz.timeLimit / 60} Menit
+                                {quiz.questions?.length || 0} Soal • {quiz.timeLimit / 60} Menit
+                                {isQuizCompleted(moduleIndex, quiz.id) && ' • Lulus'}
                               </small>
                             </div>
                           </Link>
@@ -327,8 +421,25 @@ const Learning = () => {
                 >
                   <i className="bi bi-arrow-left me-1"></i> Sebelumnya
                 </button>
-                <button onClick={nextLesson} className="btn btn-primary">
-                  {isLastLesson ? 'Mulai Kuis' : 'Selanjutnya'} 
+                <button 
+                  onClick={() => {
+                    if (isLastLesson && currentModule === course.modules.length - 1 && isModuleCompleted(currentModule) && isModuleQuizPassed(currentModule)) {
+                      // Redirect ke dashboard sesuai role
+                      if (user.role === 'teacher') {
+                        navigate('/pengajar/dashboard');
+                      } else if (user.role === 'admin') {
+                        navigate('/admin/dashboard');
+                      } else {
+                        navigate('/pelajar/dashboard');
+                      }
+                    } else {
+                      nextLesson();
+                    }
+                  }}
+                  disabled={!canProceedToNext()}
+                  className="btn btn-primary"
+                >
+                  {getNextButtonText()} 
                   <i className="bi bi-arrow-right ms-1"></i>
                 </button>
               </div>
@@ -336,7 +447,7 @@ const Learning = () => {
             <div className="progress" style={{ height: '6px' }}>
               <div 
                 className="progress-bar bg-primary" 
-                style={{ width: `${(completedLessons.size / totalLessons) * 100}%` }}
+                style={{ width: `${currentProgress}%` }}
               ></div>
             </div>
           </div>
@@ -345,22 +456,55 @@ const Learning = () => {
           <div className="p-4 flex-grow-1">
             {currentLessonData.type === "video" ? (
               <div className="container">
-                <div className="ratio ratio-16x9 mb-4">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${currentLessonData.content}`}
-                    title={currentLessonData.title}
-                    allowFullScreen
-                  ></iframe>
-                </div>
+                {currentLessonData.videoUrl ? (
+                  <>
+                    <div className="ratio ratio-16x9 mb-4">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${extractYouTubeVideoId(currentLessonData.videoUrl)}`}
+                        title={currentLessonData.title}
+                        allowFullScreen
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      ></iframe>
+                    </div>
+                    {currentLessonData.textContent && (
+                      <div className="mt-4">
+                        <h5>Deskripsi Video:</h5>
+                        <div
+                          className="content"
+                          dangerouslySetInnerHTML={{
+                            __html: currentLessonData.textContent,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-5">
+                    <div className="alert alert-warning">
+                      <h5>Video tidak tersedia</h5>
+                      <p>URL video belum diisi atau tidak valid.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="container">
-                <div
-                  className="content"
-                  dangerouslySetInnerHTML={{
-                    __html: currentLessonData.content,
-                  }}
-                />
+                {currentLessonData.textContent ? (
+                  <div
+                    className="content"
+                    dangerouslySetInnerHTML={{
+                      __html: currentLessonData.textContent,
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-5">
+                    <div className="alert alert-info">
+                      <h5>Materi belum tersedia</h5>
+                      <p>Konten pelajaran belum diisi.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -383,13 +527,13 @@ const Learning = () => {
                     : "Tandai Selesai"}
                 </button>
                 {currentModuleData.quizzes && currentModuleData.quizzes.length > 0 && (
-                  currentModuleData.lessons.every((_, idx) => isLessonCompleted(currentModule, idx)) ? (
+                  isModuleCompleted(currentModule) ? (
                     <Link
-                      to={`/kursus/${id}/modul/${currentModule + 1}/kuis/${currentModuleData.quizzes[0].id}`}
+                      to={`/kuis/${courseId}/${currentModuleData.quizzes[0].id}`}
                       className="btn btn-warning text-white"
                     >
                       <i className="bi bi-journal-check me-2"></i>
-                      Mulai Kuis {currentModule + 1}
+                      {isModuleQuizPassed(currentModule) ? 'Lihat Hasil Kuis' : 'Mulai Kuis'} {currentModule + 1}
                     </Link>
                   ) : (
                     <button

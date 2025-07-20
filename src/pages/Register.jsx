@@ -57,7 +57,12 @@ const Register = () => {
     setIsLoading(true);
     try {
       await register(formData);
-      navigate("/");
+      if (formData.role === 'teacher') {
+        alert('Pendaftaran berhasil! Silakan tunggu persetujuan admin untuk mengaktifkan akun Anda.');
+      } else {
+        alert('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
+      }
+      navigate("/login");
     } catch (err) {
       setError(err.message || "Gagal mendaftar. Silakan coba lagi.");
     } finally {

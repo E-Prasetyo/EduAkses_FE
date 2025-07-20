@@ -1,43 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { localStorageService } from "../services/localStorageService";
+import { useAuth } from "../contexts/AuthContext";
 
 const CategoryManagement = () => {
-  const [categories, setCategories] = useState([
-    {
-      id: 1,
-      name: "Programming",
-      description: "Kursus pemrograman dan pengembangan software",
-      courseCount: 25,
-      isActive: true,
-      createdAt: "2024-01-15",
-    },
-    {
-      id: 2,
-      name: "Design",
-      description: "UI/UX Design, Graphic Design, dan Web Design",
-      courseCount: 18,
-      isActive: true,
-      createdAt: "2024-01-20",
-    },
-    {
-      id: 3,
-      name: "Marketing",
-      description: "Digital Marketing, SEO, dan Social Media Marketing",
-      courseCount: 12,
-      isActive: true,
-      createdAt: "2024-02-01",
-    },
-    {
-      id: 4,
-      name: "Business",
-      description: "Entrepreneurship, Management, dan Leadership",
-      courseCount: 8,
-      isActive: false,
-      createdAt: "2024-02-10",
-    },
-  ]);
+  const { user } = useAuth();
+  const [categories, setCategories] = useState([]);
+  const [courses, setCourses] = useState([]);
+
+  useEffect(() => {
+    // Load categories and courses
+    const savedCategories = localStorageService.getCategories();
+    const savedCourses = localStorageService.getCourses() || [];
+    setCourses(savedCourses);
+
+    // Calculate course count for each category
+    const categoriesWithCounts = savedCategories.map(category => ({
+      ...category,
+      courseCount: savedCourses.filter(course => course.categoryId === category.id).length
+    }));
+
+    setCategories(categoriesWithCounts);
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -51,20 +37,33 @@ const CategoryManagement = () => {
     e.preventDefault();
     if (editingCategory) {
       // Update existing category
-      setCategories(
-        categories.map((cat) =>
-          cat.id === editingCategory.id ? { ...cat, ...formData } : cat,
-        ),
+      const updatedCategories = categories.map((cat) =>
+        cat.id === editingCategory.id ? { ...cat, ...formData } : cat
       );
+      setCategories(updatedCategories);
+      localStorageService.saveCategories(updatedCategories);
     } else {
       // Add new category
       const newCategory = {
-        id: Date.now(),
+        id: `cat${Date.now()}`,
         ...formData,
         courseCount: 0,
         createdAt: new Date().toISOString().split("T")[0],
       };
-      setCategories([...categories, newCategory]);
+      const updatedCategories = [...categories, newCategory];
+      setCategories(updatedCategories);
+      localStorageService.saveCategories(updatedCategories);
+
+      // Add notification for admins
+      const notification = {
+        id: Date.now(),
+        message: `Kategori baru "${formData.name}" telah ditambahkan`,
+        type: 'category_created',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      const notifications = localStorageService.getNotifications() || [];
+      localStorageService.saveNotifications([...notifications, notification]);
     }
     resetForm();
   };
@@ -91,20 +90,58 @@ const CategoryManagement = () => {
         "Apakah Anda yakin ingin menghapus kategori ini? Semua kursus dalam kategori ini akan kehilangan kategorinya.",
       )
     ) {
-      setCategories(categories.filter((cat) => cat.id !== categoryId));
+      // Update courses to remove the deleted category
+      const updatedCourses = courses.map(course =>
+        course.categoryId === categoryId
+          ? { ...course, categoryId: null }
+          : course
+      );
+      setCourses(updatedCourses);
+      localStorageService.saveCourses(updatedCourses);
+
+      // Delete the category
+      const categoryToDelete = categories.find(cat => cat.id === categoryId);
+      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+      setCategories(updatedCategories);
+      localStorageService.saveCategories(updatedCategories);
+
+      // Add notification
+      const notification = {
+        id: Date.now(),
+        message: `Kategori "${categoryToDelete.name}" telah dihapus`,
+        type: 'category_deleted',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      const notifications = localStorageService.getNotifications() || [];
+      localStorageService.saveNotifications([...notifications, notification]);
     }
   };
 
   const toggleStatus = (categoryId) => {
-    setCategories(
-      categories.map((cat) =>
-        cat.id === categoryId ? { ...cat, isActive: !cat.isActive } : cat,
-      ),
+    const updatedCategories = categories.map((cat) =>
+      cat.id === categoryId ? { ...cat, isActive: !cat.isActive } : cat
     );
+    setCategories(updatedCategories);
+    localStorageService.saveCategories(updatedCategories);
+
+    // Add notification
+    const category = categories.find(cat => cat.id === categoryId);
+    const action = category.isActive ? 'dinonaktifkan' : 'diaktifkan';
+    const notification = {
+      id: Date.now(),
+      message: `Kategori "${category.name}" telah ${action}`,
+      type: 'category_status_changed',
+      isRead: false,
+      createdAt: new Date().toISOString()
+    };
+    const notifications = localStorageService.getNotifications() || [];
+    localStorageService.saveNotifications([...notifications, notification]);
   };
 
   return (
     <div className="min-vh-100 d-flex flex-column">
+
 
       <main className="flex-grow-1 py-5">
         <div className="container">

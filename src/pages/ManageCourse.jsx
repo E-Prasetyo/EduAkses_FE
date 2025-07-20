@@ -1,88 +1,41 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
+import { localStorageService } from "../services/localStorageService";
+
+const TINYMCE_API_KEY = import.meta.env.VITE_TINYMCE_API_KEY;
 
 const ManageCourse = () => {
   const { id } = useParams();
-  const [courseData, setCourseData] = useState({
-    title: "JavaScript untuk Pemula",
-    description:
-      "Belajar dasar-dasar JavaScript dari nol hingga bisa membuat aplikasi web sederhana. Kursus ini cocok untuk pemula yang ingin memulai karir sebagai web developer.",
-    category: "Teknologi",
-    coverImage: null,
-    level: "Pemula",
-    duration: "8 Jam",
-    price: "free",
-    customPrice: "",
-    status: "PUBLISHED",
+  const [courseData, setCourseData] = useState(() => {
+    if (id) {
+      const found = localStorageService.getCourseById(id);
+      return found || {
+        title: "",
+        description: "",
+        category: "",
+        coverImage: null,
+        level: "Pemula",
+        duration: "",
+        price: "free",
+        customPrice: "",
+        status: "DRAFT",
+      };
+    }
+    return {
+      title: "",
+      description: "",
+      category: "",
+      coverImage: null,
+      level: "Pemula",
+      duration: "",
+      price: "free",
+      customPrice: "",
+      status: "DRAFT",
+    };
   });
-
-  const [modules, setModules] = useState([
-    {
-      id: 1,
-      title: "Pengenalan JavaScript",
-      description: "Memahami dasar-dasar JavaScript dan persiapan environment",
-      lessons: [
-        {
-          id: 1,
-          title: "Apa itu JavaScript?",
-          type: "text",
-          textContent:
-            "<h3>JavaScript adalah bahasa pemrograman</h3><p>JavaScript adalah bahasa pemrograman tingkat tinggi yang digunakan untuk membuat halaman web menjadi interaktif.</p><ul><li>Mudah dipelajari untuk pemula</li><li>Berjalan di browser dan server</li><li>Bahasa yang paling populer di dunia</li></ul>",
-          videoUrl: "",
-          duration: "10 menit",
-        },
-        {
-          id: 2,
-          title: "Setup Development Environment",
-          type: "video",
-          textContent: "",
-          videoUrl: "dQw4w9WgXcQ",
-          duration: "15 menit",
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Variabel dan Tipe Data",
-      description: "Belajar tentang variabel, tipe data, dan operator dasar",
-      lessons: [
-        {
-          id: 1,
-          title: "Deklarasi Variabel",
-          type: "text",
-          textContent:
-            "<h3>Cara mendeklarasikan variabel</h3><p>Ada tiga cara mendeklarasikan variabel di JavaScript:</p><ul><li><strong>var</strong> - cara lama</li><li><strong>let</strong> - cara modern untuk variabel yang bisa berubah</li><li><strong>const</strong> - untuk konstanta</li></ul>",
-          videoUrl: "",
-          duration: "12 menit",
-        },
-      ],
-    },
-  ]);
-
-  const [quizzes, setQuizzes] = useState([
-    {
-      id: 1,
-      title: "Kuis JavaScript Dasar",
-      timeLimit: 10,
-      passingScore: 70,
-      questions: [
-        {
-          id: 1,
-          question: "Apa itu JavaScript?",
-          options: [
-            "Bahasa pemrograman untuk web",
-            "Framework CSS",
-            "Database management system",
-            "Operating system",
-          ],
-          correctAnswer: 0,
-          explanation:
-            "JavaScript adalah bahasa pemrograman tingkat tinggi yang digunakan untuk membuat halaman web interaktif dan aplikasi.",
-        },
-      ],
-    },
-  ]);
+  const [modules, setModules] = useState(() => (id && localStorageService.getCourseById(id)?.modules) || []);
+  const [quizzes, setQuizzes] = useState(() => (id && localStorageService.getCourseById(id)?.quizzes) || []);
 
   const [currentQuiz, setCurrentQuiz] = useState({
     title: "",
@@ -328,7 +281,6 @@ const ManageCourse = () => {
 
   return (
     <div className="d-flex flex-column min-h-screen bg-light">
-      <Header />
 
       <section className="bg-dark text-white py-5">
         <div className="container">
@@ -363,12 +315,6 @@ const ManageCourse = () => {
                     className="btn btn-outline-light btn-sm"
                   >
                     👁️ Preview
-                  </Link>
-                  <Link
-                    to={`/pengajar/kursus/${id}/analytics`}
-                    className="btn btn-warning btn-sm"
-                  >
-                    📊 Analytics
                   </Link>
                 </div>
               </div>
@@ -754,7 +700,7 @@ const ManageCourse = () => {
                                             </label>
                                             <Editor
                                               key={`lesson-${moduleIndex}-${lessonIndex}`}
-                                              tinymceScriptSrc="/tinymce/tinymce.min.js"
+                                              apiKey={TINYMCE_API_KEY}
                                               value={lesson.textContent}
                                               onEditorChange={(content) =>
                                                 updateLesson(
@@ -997,7 +943,7 @@ const ManageCourse = () => {
                                 </label>
                                 <Editor
                                   key={`question-${questionIndex}`}
-                                  tinymceScriptSrc="/tinymce/tinymce.min.js"
+                                  apiKey={TINYMCE_API_KEY}
                                   value={question.question}
                                   onEditorChange={(content) =>
                                     updateQuestion(
@@ -1228,18 +1174,6 @@ const ManageCourse = () => {
                         >
                           👁️ Preview Kursus
                         </Link>
-                        <Link
-                          to={`/pengajar/kursus/${id}/analytics`}
-                          className="btn btn-outline-info"
-                        >
-                          📊 Lihat Analytics
-                        </Link>
-                        <button
-                          type="button"
-                          className="btn btn-outline-success"
-                        >
-                          📤 Export Data
-                        </button>
                         <button
                           type="button"
                           className="btn btn-outline-danger"

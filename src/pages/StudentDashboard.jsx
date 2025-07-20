@@ -2,73 +2,99 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { localStorageService } from "../services/localStorageService";
+import { useAuth } from "../contexts/AuthContext";
 
 const StudentDashboard = () => {
-  const [enrolledCourses, setEnrolledCourses] = useState([
-    {
-      id: 1,
-      title: "React untuk Pemula",
-      instructor: "Ahmad Rizki",
-      progress: 75,
-      totalLessons: 12,
-      completedLessons: 9,
-      category: "Programming",
-      thumbnail: "/api/placeholder/300/200",
-      nextLesson: "Component State Management",
-      lastAccessed: "2 hari yang lalu",
-    },
-    {
-      id: 2,
-      title: "UI/UX Design Fundamentals",
-      instructor: "Sarah Wijaya",
-      progress: 45,
-      totalLessons: 16,
-      completedLessons: 7,
-      category: "Design",
-      thumbnail: "/api/placeholder/300/200",
-      nextLesson: "User Research Methods",
-      lastAccessed: "1 minggu yang lalu",
-    },
-    {
-      id: 3,
-      title: "Digital Marketing Strategy",
-      instructor: "Budi Santoso",
-      progress: 100,
-      totalLessons: 10,
-      completedLessons: 10,
-      category: "Marketing",
-      thumbnail: "/api/placeholder/300/200",
-      nextLesson: null,
-      lastAccessed: "3 hari yang lalu",
-    },
-  ]);
+  const { user } = useAuth();
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [progress, setProgress] = useState([]);
 
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      type: "lesson_completed",
-      courseName: "React untuk Pemula",
-      lessonName: "useState Hook",
-      timestamp: "2 jam yang lalu",
-    },
-    {
-      type: "quiz_completed",
-      courseName: "UI/UX Design Fundamentals",
-      lessonName: "Design Principles Quiz",
-      score: 85,
-      timestamp: "1 hari yang lalu",
-    },
-    {
-      type: "course_completed",
-      courseName: "Digital Marketing Strategy",
-      timestamp: "3 hari yang lalu",
-    },
-    {
-      type: "forum_post",
-      courseName: "React untuk Pemula",
-      lessonName: "Diskusi tentang Hooks",
-      timestamp: "5 hari yang lalu",
-    },
-  ]);
+  useEffect(() => {
+    if (!user) return;
+    // Load all data from localStorage
+    const allCourses = localStorageService.getCourses() || [];
+    const enrollments = localStorageService.getUserEnrollments(user.id) || [];
+    const allProgress = localStorageService.getProgress() || [];
+    // Get enrolled courses with details
+    const studentCourses = enrollments.map(enrollment => {
+      const course = allCourses.find(c => c.id === enrollment.courseId);
+      if (!course) return null; // skip if course not found
+      const courseProgress = allProgress.find(p => p.userId === user.id && p.courseId === course.id) || { progress: 0, completedLessons: [] };
+      return {
+        ...course,
+        progress: courseProgress.progress,
+        completedLessons: courseProgress.completedLessons,
+        totalLessons: course.modules ? course.modules.reduce((acc, m) => acc + (m.lessons || m.content || []).length, 0) : 0,
+        lastAccessed: enrollment.lastAccessedAt || enrollment.enrolledAt,
+        completed: enrollment.completed
+      };
+    }).filter(Boolean); // filter out null
+    setEnrolledCourses(studentCourses);
+    setCourses(allCourses);
+    setProgress(allProgress);
+  }, [user]);
+
+  // Function to save progress data
+  const saveProgressData = (newProgress) => {
+    localStorageService.saveProgress(newProgress);
+  };
+
+  // Function to save activity data
+  const saveActivityData = (newActivity) => {
+    const notifications = localStorageService.getNotifications() || [];
+    localStorageService.saveNotifications([...notifications, newActivity]);
+  };
+
+  // Update course progress
+  const updateCourseProgress = (courseId, newProgress, completedLessons) => {
+    // Update progress in localStorage
+    const allProgress = localStorageService.getProgress() || [];
+    const updatedProgress = allProgress.map(p =>
+      p.studentId === user.id && p.courseId === courseId
+        ? { ...p, progress: newProgress, completedLessons }
+        : p
+    );
+
+    if (!updatedProgress.some(p => p.studentId === user.id && p.courseId === courseId)) {
+      updatedProgress.push({
+        studentId: user.id,
+        courseId,
+        progress: newProgress,
+        completedLessons,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // Update local state
+    const updatedCourses = enrolledCourses.map(course =>
+      course.id === courseId
+        ? { ...course, progress: newProgress, completedLessons }
+        : course
+    );
+
+    setEnrolledCourses(updatedCourses);
+    saveProgressData(updatedProgress);
+  };
+
+  // Add new activity
+  const addActivity = (type, courseId, details = {}) => {
+    const activity = {
+      id: Date.now(),
+      userId: user.id,
+      courseId,
+      type,
+      ...details,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+
+    const updatedActivities = [activity, ...recentActivity];
+    setRecentActivity(updatedActivities);
+    saveActivityData(activity);
+  };
 
   const totalProgress =
     enrolledCourses.reduce((acc, course) => acc + course.progress, 0) /
@@ -104,7 +130,7 @@ const StudentDashboard = () => {
           <div className="row align-items-center">
             <div className="col-lg-8">
               <h1 className="display-6 fw-bold text-white mb-3">
-                Selamat Datang Kembali, Randi! 👋
+                Selamat Datang Kembali, {user?.name || 'Student'}! 👋
               </h1>
               <p className="lead text-white-50 mb-4">
                 Lanjutkan perjalanan belajar Anda dan capai tujuan yang telah
@@ -183,7 +209,7 @@ const StudentDashboard = () => {
                     (course) => course.progress > 0 && course.progress < 100,
                   )
                   .map((course) => (
-                    <div key={course.id} className="col-md-6">
+                    <div key={course.id} className="col-md-6 mb-4">
                       <div className="card border-0 shadow-sm h-100">
                         <div className="position-relative">
                           <img
@@ -191,6 +217,7 @@ const StudentDashboard = () => {
                             alt={course.title}
                             className="card-img-top"
                             style={{ height: "160px", objectFit: "cover" }}
+                            onError={e => { e.target.style.display = 'none'; }}
                           />
                           <div className="position-absolute top-0 end-0 m-2">
                             <span className="badge bg-primary">
@@ -239,10 +266,10 @@ const StudentDashboard = () => {
                           </small>
 
                           <Link
-                            to={`/kursus/${course.id}/belajar`}
-                            className="btn btn-edu-primary w-100"
+                            to={course.completed ? `/kursus/${course.id}` : `/belajar/${course.id}`}
+                            className={`btn ${course.completed ? 'btn-outline-success' : 'btn-edu-primary'} w-100`}
                           >
-                            Lanjut Belajar
+                            {course.completed ? 'Lihat Course' : 'Lanjut Belajar'}
                           </Link>
                         </div>
                       </div>
@@ -273,6 +300,7 @@ const StudentDashboard = () => {
                                     height: "60px",
                                     objectFit: "cover",
                                   }}
+                                  onError={e => { e.target.style.display = 'none'; }}
                                 />
                                 <div className="flex-grow-1">
                                   <h6 className="fw-bold mb-1">
@@ -290,7 +318,7 @@ const StudentDashboard = () => {
                                       to={`/kursus/${course.id}`}
                                       className="btn btn-outline-primary btn-sm"
                                     >
-                                      Beri Rating
+                                      Belajar Lagi
                                     </Link>
                                   </div>
                                 </div>

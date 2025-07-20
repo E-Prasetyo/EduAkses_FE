@@ -2,10 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { localStorageService } from "../services/localStorageService";
 
 const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
-  const { courseId, moduleId } = useParams();
+  const { courseId, moduleId, quizId } = useParams();
   const navigate = useNavigate();
+  const [selectedModuleId, setSelectedModuleId] = useState("");
+  const [courseModules, setCourseModules] = useState([]);
   const [quizData, setQuizData] = useState({
     title: "",
     description: "",
@@ -28,8 +31,58 @@ const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
     if (!courseId) {
       console.error("Course ID is required");
       navigate("/pengajar/kursus");
+      return;
     }
-  }, [courseId, navigate]);
+    
+    // Load course modules for dropdown
+    const course = localStorageService.getCourseById(courseId);
+    console.log("Loading course for quiz creation:", course);
+    console.log("Course modules:", course?.modules);
+    console.log("CourseId from URL:", courseId, "Type:", typeof courseId);
+    console.log("ModuleId from URL:", moduleId, "Type:", typeof moduleId);
+    
+    if (course && course.modules) {
+      setCourseModules(course.modules);
+      console.log("Course modules set:", course.modules);
+      
+      // Jika ada moduleId di URL, set sebagai default selected
+      if (moduleId) {
+        console.log("Setting default moduleId:", moduleId);
+        setSelectedModuleId(moduleId);
+      }
+    } else {
+      console.error("Course or modules not found");
+      setCourseModules([]);
+    }
+  }, [courseId, moduleId, navigate]);
+
+  // Prefill data jika edit quiz
+  useEffect(() => {
+    if (quizId && courseModules.length > 0) {
+      // Cari quiz di module yang sesuai
+      let foundQuiz = null;
+      let foundModuleId = moduleId;
+      courseModules.forEach((mod) => {
+        if (mod.quizzes) {
+          const q = mod.quizzes.find(qz => String(qz.id) === String(quizId));
+          if (q) {
+            foundQuiz = q;
+            foundModuleId = mod.id;
+          }
+        }
+      });
+      if (foundQuiz) {
+        setQuizData({
+          title: foundQuiz.title,
+          description: foundQuiz.description,
+          timeLimit: foundQuiz.timeLimit,
+          passingScore: foundQuiz.passingScore,
+        });
+        setQuestions(foundQuiz.questions);
+        setSelectedModuleId(foundModuleId);
+      }
+    }
+  }, [quizId, courseModules, moduleId]);
 
   const handleQuizDataChange = (e) => {
     setQuizData({
@@ -75,21 +128,105 @@ const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validasi data quiz
+    if (!quizData.title.trim()) {
+      alert("Judul kuis harus diisi!");
+      return;
+    }
+    
+    if (!selectedModuleId) {
+      alert("Pilih module untuk quiz ini!");
+      return;
+    }
+    
+    if (questions.length === 0) {
+      alert("Minimal harus ada 1 soal!");
+      return;
+    }
+    
+    // Validasi setiap soal
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      if (!question.question.trim()) {
+        alert(`Soal ${i + 1} harus diisi!`);
+        return;
+      }
+      
+      // Validasi opsi jawaban
+      for (let j = 0; j < question.options.length; j++) {
+        if (!question.options[j].trim()) {
+          alert(`Opsi ${String.fromCharCode(65 + j)} pada soal ${i + 1} harus diisi!`);
+          return;
+        }
+      }
+      
+      if (!question.explanation.trim()) {
+        alert(`Penjelasan soal ${i + 1} harus diisi!`);
+        return;
+      }
+    }
+    
     const quizSubmitData = {
+      id: quizId || `quiz_${Date.now()}`,
       ...quizData,
       questions,
       courseId: courseId,
-      moduleId: moduleId || null,
+      moduleId: selectedModuleId,
+      createdAt: new Date().toISOString(),
+      teacherId: localStorage.getItem("userData") ? JSON.parse(localStorage.getItem("userData")).id : null
     };
 
     if (onSubmit) {
       onSubmit(quizSubmitData);
     } else {
-      const savedQuizzes = JSON.parse(localStorage.getItem("quizzes") || "[]");
-      savedQuizzes.push(quizSubmitData);
-      localStorage.setItem("quizzes", JSON.stringify(savedQuizzes));
-
-      navigate(`/pengajar/kursus/${courseId}/edit`);
+      try {
+        // Ambil course yang sedang diedit
+        const course = localStorageService.getCourseById(courseId);
+        if (!course) {
+          alert("Course tidak ditemukan!");
+          return;
+        }
+        // Update course dengan quiz baru/edited
+        const updatedCourse = { ...course };
+        if (selectedModuleId) {
+          if (!updatedCourse.modules) {
+            updatedCourse.modules = [];
+          }
+          const moduleIndex = updatedCourse.modules.findIndex(m => m.id === parseInt(selectedModuleId));
+          if (moduleIndex !== -1) {
+            if (!updatedCourse.modules[moduleIndex].quizzes) {
+              updatedCourse.modules[moduleIndex].quizzes = [];
+            }
+            // Jika edit, replace quiz, jika baru, push
+            const quizIdx = updatedCourse.modules[moduleIndex].quizzes.findIndex(q => String(q.id) === String(quizSubmitData.id));
+            if (quizIdx !== -1) {
+              updatedCourse.modules[moduleIndex].quizzes[quizIdx] = quizSubmitData;
+            } else {
+              updatedCourse.modules[moduleIndex].quizzes.push(quizSubmitData);
+            }
+          } else {
+            alert("Module tidak ditemukan!");
+            return;
+          }
+        } else {
+          if (!updatedCourse.quizzes) {
+            updatedCourse.quizzes = [];
+          }
+          updatedCourse.quizzes.push(quizSubmitData);
+        }
+        // Simpan course yang sudah diupdate
+        const allCourses = localStorageService.getCourses();
+        const updatedCourses = allCourses.map(c => 
+          c.id === courseId ? updatedCourse : c
+        );
+        localStorageService.saveCourses(updatedCourses);
+        alert("Quiz berhasil disimpan!");
+        navigate(`/pengajar/kursus/${courseId}/edit`);
+      } catch (error) {
+        console.error("Error saving quiz:", error);
+        alert("Gagal menyimpan quiz. Silakan coba lagi.");
+      }
     }
   };
 
@@ -121,10 +258,10 @@ const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
         <div className="container position-relative z-2">
           <div className="row align-items-center">
             <div className="col-lg-8">
-              <h1 className="display-4 fw-bold text-white mb-2">
+              <h1 className="display-4 fw-bold text-black mb-2">
                 Buat Kuis Baru
               </h1>
-              <p className="lead text-white-50 mb-0">
+              <p className="lead text-black-50 mb-0">
                 Rancang kuis interaktif untuk menguji pemahaman siswa Anda
               </p>
             </div>
@@ -212,6 +349,35 @@ const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
                         />
                         <span className="input-group-text">%</span>
                       </div>
+                    </div>
+                    <div className="col-md-8">
+                      <label className="form-label fw-medium">Pilih Module *</label>
+                      <select
+                        value={selectedModuleId}
+                        onChange={(e) => {
+                          console.log("Module selected:", e.target.value);
+                          setSelectedModuleId(e.target.value);
+                        }}
+                        required
+                        disabled={!!moduleId} // Disable jika moduleId ada di URL
+                        className="form-control form-control-lg"
+                      >
+                        <option value="">Pilih module untuk quiz ini</option>
+                        {courseModules.map((module, index) => {
+                          console.log("Rendering module option:", module);
+                          return (
+                            <option key={module.id} value={module.id}>
+                              Module {index + 1}: {module.title}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <small className="text-muted">
+                        {moduleId ? 
+                          `Quiz akan ditambahkan ke Module ${courseModules.findIndex(m => m.id === parseInt(moduleId)) + 1}` : 
+                          `Available modules: ${courseModules.length}`
+                        }
+                      </small>
                     </div>
                   </div>
                 </div>
@@ -327,7 +493,6 @@ const CreateQuiz = ({ onSubmit, onCancel, isModal = false }) => {
         </div>
       </div>
 
-      <Footer />
 
       {/* Custom CSS */}
       <style jsx>{`

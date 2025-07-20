@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { localStorageService } from "../services/localStorageService";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -12,166 +13,52 @@ const Kursus = () => {
   const [sortBy, setSortBy] = useState("Terbaru");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [currentPage, setCurrentPage] = useState(1);
+  const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const coursesPerPage = 9;
 
-  const courses = [
-    {
-      id: "javascript-pemula",
-      title: "JavaScript untuk Pemula",
-      description:
-        "Belajar dasar-dasar JavaScript dari nol hingga bisa membuat aplikasi web sederhana.",
-      image:
-        "https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=300&h=200&fit=crop",
-      instructor: "Ahmad Fulan",
-      rating: 4.8,
-      students: 1250,
-      duration: "8 Jam",
-      level: "Pemula",
-      price: "free",
-      category: "Teknologi",
-    },
-    {
-      id: "react-fundamental",
-      title: "React JS Fundamental",
-      description:
-        "Memahami konsep dasar React JS dan cara membangun aplikasi modern.",
-      image:
-        "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop",
-      instructor: "Siti Nurhaliza",
-      rating: 4.9,
-      students: 890,
-      duration: "12 Jam",
-      level: "Menengah",
-      price: "paid",
-      originalPrice: 299000,
-      discountPrice: 199000,
-      category: "Teknologi",
-    },
-    {
-      id: "ui-ux-design",
-      title: "UI/UX Design Fundamentals",
-      description:
-        "Memahami prinsip-prinsip desain UI/UX dan cara membuat wireframe yang efektif.",
-      image:
-        "https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=300&h=200&fit=crop",
-      instructor: "Budi Santoso",
-      rating: 4.7,
-      students: 2100,
-      duration: "6 Jam",
-      level: "Pemula",
-      price: "paid",
-      originalPrice: 399000,
-      discountPrice: 249000,
-      category: "Seni & Desain",
-    },
-    {
-      id: "python-data-science",
-      title: "Python untuk Data Science",
-      description:
-        "Belajar Python untuk analisis data dan machine learning dengan library populer.",
-      image:
-        "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=300&h=200&fit=crop",
-      instructor: "Dr. Maya Sari",
-      rating: 4.9,
-      students: 1567,
-      duration: "15 Jam",
-      level: "Lanjutan",
-      price: "paid",
-      originalPrice: 599000,
-      discountPrice: 399000,
-      category: "Teknologi",
-    },
-    {
-      id: "digital-marketing",
-      title: "Digital Marketing Strategy",
-      description:
-        "Strategi pemasaran digital yang efektif untuk meningkatkan brand awareness.",
-      image:
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=200&fit=crop",
-      instructor: "Rina Pratiwi",
-      rating: 4.6,
-      students: 743,
-      duration: "4 Jam",
-      level: "Menengah",
-      price: "paid",
-      originalPrice: 199000,
-      discountPrice: 149000,
-      category: "Bisnis",
-    },
-    {
-      id: "fotografi-pemula",
-      title: "Fotografi untuk Pemula",
-      description:
-        "Dasar-dasar fotografi mulai dari komposisi hingga teknik editing sederhana.",
-      image:
-        "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=300&h=200&fit=crop",
-      instructor: "Joko Anwar",
-      rating: 4.5,
-      students: 967,
-      duration: "7 Jam",
-      level: "Pemula",
-      price: "free",
-      category: "Seni & Desain",
-    },
-    {
-      id: "copywriting-konversi",
-      title: "Copywriting untuk Konversi",
-      description:
-        "Teknik menulis copy yang persuasif untuk meningkatkan tingkat konversi.",
-      image:
-        "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=300&h=200&fit=crop",
-      instructor: "Lisa Amanda",
-      rating: 4.8,
-      students: 654,
-      duration: "5 Jam",
-      level: "Menengah",
-      price: "paid",
-      originalPrice: 299000,
-      discountPrice: 199000,
-      category: "Literasi & Kewirausahaan",
-    },
-    {
-      id: "manajemen-waktu",
-      title: "Manajemen Waktu Efektif",
-      description:
-        "Teknik dan strategi manajemen waktu untuk meningkatkan produktivitas.",
-      image:
-        "https://images.unsplash.com/photo-1551434678-e076c223a692?w=300&h=200&fit=crop",
-      instructor: "Rudi Hartono",
-      rating: 4.7,
-      students: 1200,
-      duration: "3 Jam",
-      level: "Pemula",
-      price: "free",
-      category: "Pengembangan Diri",
-    },
-    {
-      id: "nodejs-backend",
-      title: "Node.js Backend Development",
-      description:
-        "Membangun aplikasi backend yang scalable dengan Node.js dan Express.",
-      image:
-        "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop",
-      instructor: "Sarah Putri",
-      rating: 4.9,
-      students: 432,
-      duration: "10 Jam",
-      level: "Lanjutan",
-      price: "paid",
-      originalPrice: 499000,
-      discountPrice: 349000,
-      category: "Teknologi",
-    },
-  ];
+  // Fetch courses from localStorage
+  useEffect(() => {
+    const fetchData = () => {
+      setIsLoading(true);
+      try {
+        // Get all courses from localStorage
+        const allCourses = localStorageService.getCourses();
+        
+        // Filter only published courses
+        const publishedCourses = allCourses.filter(course => course.status === "PUBLISHED");
+        
+        setCourses(publishedCourses);
+        
+        // Extract unique categories from courses
+        const uniqueCategories = ["Semua Kategori"];
+        publishedCourses.forEach(course => {
+          if (course.category && !uniqueCategories.includes(course.category)) {
+            uniqueCategories.push(course.category);
+          }
+        });
+        setCategories(uniqueCategories);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        setCourses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const categories = [
-    "Semua Kategori",
-    "Teknologi",
-    "Seni & Desain",
-    "Bisnis",
-    "Literasi & Kewirausahaan",
-    "Pengembangan Diri",
-  ];
+    fetchData();
+
+    // Add event listener for storage changes
+    window.addEventListener('storage', fetchData);
+    
+    // Cleanup event listener on unmount
+    return () => {
+      window.removeEventListener('storage', fetchData);
+    };
+  }, []);
+
+  // levels is declared below
 
   const levels = ["Semua Level", "Pemula", "Menengah", "Lanjutan"];
 
@@ -417,7 +304,7 @@ const Kursus = () => {
               {viewMode === "grid" ? (
                 <div className="row g-4 mb-5">
                   {currentCourses.map((course) => (
-                    <div key={course.id} className="col-lg-4 col-md-6">
+                    <div key={course.id} className="col-lg-4 col-md-6 mb-4">
                       <CourseCard course={course} />
                     </div>
                   ))}
@@ -425,7 +312,7 @@ const Kursus = () => {
               ) : (
                 <div className="row g-4 mb-5">
                   {currentCourses.map((course) => (
-                    <div key={course.id} className="col-12">
+                    <div key={course.id} className="col-12 mb-4">
                       <CourseListItem course={course} />
                     </div>
                   ))}

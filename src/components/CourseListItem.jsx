@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { stripHtml } from "../lib/utils";
 
 const CourseListItem = ({ course }) => {
+  const [imgError, setImgError] = useState(false);
+  const showImage = (course.coverImage || course.thumbnail || course.image) && !imgError;
   return (
     <div className="card border-0 shadow-sm card-hover h-100">
       <div className="row g-0">
@@ -11,12 +14,17 @@ const CourseListItem = ({ course }) => {
             className="position-relative h-100"
             style={{ minHeight: "200px" }}
           >
-            <img
-              src={course.image}
-              alt={course.title}
-              className="img-fluid h-100 w-100 rounded-start"
-              style={{ objectFit: "cover" }}
-            />
+            {showImage ? (
+              <img
+                src={course.coverImage || course.thumbnail || course.image || ''}
+                alt={course.title}
+                className="img-fluid h-100 w-100 rounded-start"
+                style={{ objectFit: "cover" }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div style={{ minHeight: "200px" }}></div>
+            )}
             <div className="position-absolute top-0 start-0 m-3">
               <span className="badge bg-dark font-jost">{course.category}</span>
             </div>
@@ -53,8 +61,8 @@ const CourseListItem = ({ course }) => {
               </Link>
             </h5>
 
-            <p className="card-text text-muted font-jost mb-3 flex-grow-1">
-              {course.description}
+            <p className="card-text text-muted font-jost mb-3 flex-grow-1" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+              {stripHtml(course.description)}
             </p>
 
             {/* Meta Info */}

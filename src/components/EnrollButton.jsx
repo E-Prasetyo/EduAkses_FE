@@ -23,7 +23,7 @@ const EnrollButton = ({ courseId, price, isEnrolled = false, onEnroll }) => {
     return (
       <div className="d-grid">
         <Link
-          to={`/kursus/${courseId}/belajar`}
+          to={`/belajar/${courseId}`}
           className="btn btn-edu-primary btn-lg"
         >
           <i className="fas fa-play me-2"></i>

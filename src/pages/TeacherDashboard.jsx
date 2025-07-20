@@ -1,118 +1,129 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { localStorageService } from "../services/localStorageService";
+import { useAuth } from "../contexts/AuthContext";
 
 const TeacherDashboard = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
-  const [myCourses] = useState([
-    {
-      id: "javascript-pemula",
-      title: "JavaScript untuk Pemula",
-      status: "PUBLISHED",
-      students: 1250,
-      rating: 4.8,
-      reviews: 156,
-      revenue: 2850000,
-      price: "free",
-      lastUpdated: "2024-01-15",
-      thumbnail:
-        "https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=200&h=120&fit=crop",
-      completion: 78,
-      views: 3456,
-    },
-    {
-      id: "react-fundamental",
-      title: "React JS Fundamental",
-      status: "PUBLISHED",
-      students: 890,
-      rating: 4.9,
-      reviews: 124,
-      revenue: 4200000,
-      price: "paid",
-      lastUpdated: "2024-01-12",
-      thumbnail:
-        "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=200&h=120&fit=crop",
-      completion: 85,
-      views: 2890,
-    },
-    {
-      id: "python-data-science",
-      title: "Python untuk Data Science",
-      status: "PENDING_REVIEW",
-      students: 0,
-      rating: 0,
-      reviews: 0,
-      revenue: 0,
-      price: "paid",
-      lastUpdated: "2024-01-20",
-      thumbnail:
-        "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=200&h=120&fit=crop",
-      completion: 0,
-      views: 145,
-    },
-    {
-      id: "ui-ux-design",
-      title: "UI/UX Design Fundamentals",
-      status: "DRAFT",
-      students: 0,
-      rating: 0,
-      reviews: 0,
-      revenue: 0,
-      price: "paid",
-      lastUpdated: "2024-01-18",
-      thumbnail:
-        "https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=200&h=120&fit=crop",
-      completion: 0,
-      views: 89,
-    },
-    {
-      id: "nodejs-backend",
-      title: "Node.js Backend Development",
-      status: "REJECTED",
-      students: 0,
-      rating: 0,
-      reviews: 0,
-      revenue: 0,
-      price: "paid",
-      lastUpdated: "2024-01-10",
-      thumbnail:
-        "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=120&fit=crop",
-      completion: 0,
-      views: 234,
-    },
-  ]);
+  const [myCourses, setMyCourses] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
 
-  const [notifications] = useState([
-    {
-      id: 1,
-      type: "review",
-      message: "Kursus 'Python Data Science' sedang direview admin",
-      time: "2 jam yang lalu",
-      read: false,
-    },
-    {
-      id: 2,
-      type: "rating",
-      message: "Review baru (5 bintang) untuk 'JavaScript Pemula'",
-      time: "5 jam yang lalu",
-      read: false,
-    },
-    {
-      id: 3,
-      type: "student",
-      message: "15 siswa baru mendaftar hari ini",
-      time: "1 hari yang lalu",
-      read: true,
-    },
-    {
-      id: 4,
-      type: "rejected",
-      message: "Kursus 'Node.js Backend' ditolak. Silakan perbaiki",
-      time: "2 hari yang lalu",
-      read: false,
-    },
-  ]);
+  useEffect(() => {
+    if (!user) return;
+
+    const loadTeacherData = () => {
+      // Load all data from localStorage
+      const allCourses = localStorageService.getCourses() || [];
+      const allStudents = localStorageService.getUsers().filter(u => u.role === 'student');
+      const allEnrollments = localStorageService.getEnrollments() || [];
+      const teacherNotifications = (localStorageService.getNotifications() || [])
+        .filter(notif => notif.userId === user.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+      // Debug: Log user dan courses data
+      console.log('Current User:', user);
+      console.log('All Courses:', allCourses);
+      console.log('User ID:', user.id);
+      console.log('User Role:', user.role);
+      
+      // Filter courses for this teacher - perbaiki logika filter
+      const teacherCourses = allCourses.filter(course => {
+        console.log('Course:', course.title, 'TeacherId:', course.teacherId, 'User ID:', user.id);
+        // Filter berdasarkan teacherId atau instructor name, atau jika user adalah admin
+        return course.teacherId === user.id || 
+               course.instructor === user.name || 
+               (user.role === 'admin' && course.status === 'PUBLISHED');
+      });
+      
+      console.log('Filtered Teacher Courses:', teacherCourses);
+  
+      // Calculate course statistics
+      const coursesWithStats = teacherCourses.map(course => {
+        const courseEnrollments = allEnrollments.filter(e => e.courseId === course.id);
+        const courseStudents = courseEnrollments.length;
+        const courseRevenue = courseStudents * (course.price || 0);
+        const courseRatings = courseEnrollments.map(e => e.rating).filter(r => r);
+        const averageRating = courseRatings.length > 0
+          ? courseRatings.reduce((a, b) => a + b, 0) / courseRatings.length
+          : 0;
+  
+        return {
+          ...course,
+          students: courseStudents,
+          revenue: courseRevenue,
+          rating: averageRating,
+          reviews: courseRatings.length,
+          completion: courseEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / courseStudents || 0,
+          views: Math.floor(Math.random() * 5000) // TODO: Implement actual view tracking
+        };
+      });
+  
+      setMyCourses(coursesWithStats);
+      setStudents(allStudents);
+      setEnrollments(allEnrollments);
+      setNotifications(teacherNotifications);
+    };
+  
+    loadTeacherData();
+
+    // Tambahkan event listener untuk sinkronisasi real-time
+    const handleStorageChange = (e) => {
+      if (e.key === 'eduakses_courses') {
+        loadTeacherData();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [user]);
+
+  // Function to save course data
+  const saveCourseData = (courses) => {
+    localStorageService.saveCourses(courses);
+  };
+
+  // Function to save notification data
+  const saveNotificationData = (notifs) => {
+    localStorageService.saveNotifications(notifs);
+  };
+
+  // Update course status
+  const updateCourseStatus = (courseId, newStatus) => {
+    // Update in all courses
+    const allCourses = localStorageService.getCourses() || [];
+    const updatedAllCourses = allCourses.map(course =>
+      course.id === courseId ? { ...course, status: newStatus } : course
+    );
+
+    // Update local state for teacher's courses
+    const updatedMyCourses = myCourses.map(course =>
+      course.id === courseId ? { ...course, status: newStatus } : course
+    );
+
+    setMyCourses(updatedMyCourses);
+    saveCourseData(updatedAllCourses);
+  };
+
+  // Mark notification as read
+  const markNotificationAsRead = (notificationId) => {
+    const allNotifications = localStorageService.getNotifications() || [];
+    const updatedAllNotifications = allNotifications.map(notification =>
+      notification.id === notificationId ? { ...notification, isRead: true } : notification
+    );
+
+    const updatedMyNotifications = updatedAllNotifications
+      .filter(notif => notif.userId === user.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    setNotifications(updatedMyNotifications);
+    saveNotificationData(updatedAllNotifications);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -178,6 +189,15 @@ const TeacherDashboard = () => {
     myCourses.filter((course) => course.rating > 0).length;
 
   const totalViews = myCourses.reduce((sum, course) => sum + course.views, 0);
+
+  // Tambahkan fungsi handleDeleteCourse
+  const handleDeleteCourse = (courseId) => {
+    if (!window.confirm('Yakin ingin menghapus kursus ini?')) return;
+    const allCourses = localStorageService.getCourses() || [];
+    const updatedCourses = allCourses.filter(c => c.id !== courseId);
+    localStorageService.saveCourses(updatedCourses);
+    setMyCourses(myCourses.filter(c => c.id !== courseId));
+  };
 
   return (
     <div className="d-flex flex-column min-h-screen bg-light">
@@ -400,19 +420,6 @@ const TeacherDashboard = () => {
                   </button>
                 </li>
                 <li
-                  className="nav-item hide-analytics"
-                  role="presentation"
-                  style={{ display: "none" }}
-                >
-                  <button
-                    className={`nav-link ${activeTab === "analytics" ? "active" : ""}`}
-                    onClick={() => setActiveTab("analytics")}
-                    type="button"
-                  >
-                    📈 Analytics
-                  </button>
-                </li>
-                <li
                   className="nav-item hide-notifications"
                   role="presentation"
                   style={{ display: "none" }}
@@ -445,17 +452,18 @@ const TeacherDashboard = () => {
                       </h5>
                     </div>
                     <div className="card-body">
-                      <div className="row g-3">
+                      <div className="row g-3 mb-4">
                         {myCourses.slice(0, 3).map((course) => (
-                          <div key={course.id} className="col-12">
+                          <div key={course.id} className="col-12 mb-3">
                             <div className="d-flex align-items-center p-3 bg-light rounded">
                               <img
-                                src={course.thumbnail}
+                                src={course.thumbnail || course.image}
                                 alt={course.title}
                                 className="rounded me-3"
                                 width="80"
                                 height="60"
                                 style={{ objectFit: "cover" }}
+                                onError={e => { e.target.style.display = 'none'; }}
                               />
                               <div className="flex-grow-1">
                                 <h6 className="mb-1 font-exo fw-semibold">
@@ -509,21 +517,26 @@ const TeacherDashboard = () => {
                                       <li>
                                         <Link
                                           className="dropdown-item"
-                                          to={`/pengajar/kursus/${course.id}/analytics`}
-                                        >
-                                          📊 Analytics
-                                        </Link>
-                                      </li>
-                                      <li>
-                                        <Link
-                                          className="dropdown-item"
                                           to={`/pengajar/kursus/${course.id}/quiz/create`}
                                         >
                                           📝 Buat Quiz
                                         </Link>
                                       </li>
+                                      <li>
+                                        <Link
+                                          className="dropdown-item"
+                                          to={`/pengajar/kursus/${course.id}/edit`}
+                                        >
+                                          🎯 Kelola Quiz
+                                        </Link>
+                                      </li>
                                     </>
                                   )}
+                                  <li>
+                                    <button onClick={() => handleDeleteCourse(course.id)} className="dropdown-item text-danger">
+                                      🗑️ Hapus
+                                    </button>
+                                  </li>
                                 </ul>
                               </div>
                             </div>
@@ -613,12 +626,13 @@ const TeacherDashboard = () => {
                             <td>
                               <div className="d-flex align-items-center">
                                 <img
-                                  src={course.thumbnail}
+                                  src={course.thumbnail || course.image}
                                   alt={course.title}
                                   className="rounded me-3"
                                   width="60"
                                   height="40"
                                   style={{ objectFit: "cover" }}
+                                  onError={e => { e.target.style.display = 'none'; }}
                                 />
                                 <div>
                                   <h6 className="mb-0 font-exo fw-semibold">
@@ -672,152 +686,25 @@ const TeacherDashboard = () => {
                               )}
                             </td>
                             <td>
-                              <div className="dropdown">
-                                <button
-                                  className="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                  type="button"
-                                  data-bs-toggle="dropdown"
-                                >
-                                  Aksi
+                              <div className="d-flex gap-2 justify-content-center">
+                                <Link to={`/pengajar/kursus/${course.id}/edit`} className="btn btn-outline-warning btn-sm" title="Edit Kursus">
+                                  <i className="fas fa-edit"></i>
+                                </Link>
+                                <Link to={`/pengajar/kursus/${course.id}/edit`} className="btn btn-outline-info btn-sm" title="Kelola Quiz">
+                                  <i className="fas fa-question-circle"></i>
+                                </Link>
+                                <button onClick={() => handleDeleteCourse(course.id)} className="btn btn-outline-danger btn-sm" title="Hapus Kursus">
+                                  <i className="fas fa-trash"></i>
                                 </button>
-                                <ul className="dropdown-menu">
-                                  <li>
-                                    <Link
-                                      className="dropdown-item"
-                                      to={`/pengajar/kursus/${course.id}/edit`}
-                                      onClick={(e) => {
-                                        if (!course.id) {
-                                          e.preventDefault();
-                                          alert('ID kursus tidak valid');
-                                          return;
-                                        }
-                                      }}
-                                    >
-                                      ✏️ Edit
-                                    </Link>
-                                  </li>
-                                  {course.status === "PUBLISHED" && (
-                                    <>
-                                      <li>
-                                        <Link
-                                          className="dropdown-item"
-                                          to={`/kursus/${course.id}`}
-                                        >
-                                          👁️ Lihat
-                                        </Link>
-                                      </li>
-                                      <li>
-                                        <Link
-                                          className="dropdown-item"
-                                          to={`/pengajar/kursus/${course.id}/analytics`}
-                                        >
-                                          📊 Analytics
-                                        </Link>
-                                      </li>
-                                      <li>
-                                        <Link
-                                          className="dropdown-item"
-                                          to={`/pengajar/kursus/${course.id}/quiz/create`}
-                                        >
-                                          📝 Buat Quiz
-                                        </Link>
-                                      </li>
-                                    </>
-                                  )}
-                                  <li>
-                                    <hr className="dropdown-divider" />
-                                  </li>
-                                  <li>
-                                    <button className="dropdown-item text-danger">
-                                      🗑️ Hapus
-                                    </button>
-                                  </li>
-                                </ul>
+                                <Link to={`/kursus/${course.id}`} className="btn btn-outline-primary btn-sm" title="Lihat Kursus">
+                                  <i className="fas fa-eye"></i>
+                                </Link>
                               </div>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Analytics Tab */}
-            {activeTab === "analytics" && (
-              <div className="row g-4">
-                <div className="col-lg-8">
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-white">
-                      <h5 className="card-title mb-0 font-exo fw-semibold">
-                        Performance Overview
-                      </h5>
-                    </div>
-                    <div className="card-body">
-                      <div className="row g-4">
-                        <div className="col-md-6">
-                          <div className="text-center p-4 bg-light rounded">
-                            <h3 className="text-primary">85%</h3>
-                            <p className="mb-0">Completion Rate</p>
-                          </div>
-                        </div>
-                        <div className="col-md-6">
-                          <div className="text-center p-4 bg-light rounded">
-                            <h3 className="text-success">4.8/5</h3>
-                            <p className="mb-0">Average Rating</p>
-                          </div>
-                        </div>
-                        <div className="col-md-6">
-                          <div className="text-center p-4 bg-light rounded">
-                            <h3 className="text-info">12,450</h3>
-                            <p className="mb-0">Total Enrollments</p>
-                          </div>
-                        </div>
-                        <div className="col-md-6">
-                          <div className="text-center p-4 bg-light rounded">
-                            <h3 className="text-warning">Rp 7.2M</h3>
-                            <p className="mb-0">Total Revenue</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-4">
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-white">
-                      <h5 className="card-title mb-0 font-exo fw-semibold">
-                        Top Performing
-                      </h5>
-                    </div>
-                    <div className="card-body">
-                      {myCourses
-                        .filter((course) => course.students > 0)
-                        .sort((a, b) => b.students - a.students)
-                        .slice(0, 3)
-                        .map((course, index) => (
-                          <div
-                            key={course.id}
-                            className="d-flex align-items-center mb-3"
-                          >
-                            <div className="me-3">
-                              <span
-                                className={`badge ${index === 0 ? "bg-warning" : index === 1 ? "bg-secondary" : "bg-light text-dark"} rounded-pill`}
-                              >
-                                #{index + 1}
-                              </span>
-                            </div>
-                            <div className="flex-grow-1">
-                              <h6 className="mb-0 small">{course.title}</h6>
-                              <small className="text-muted">
-                                {course.students} siswa
-                              </small>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -893,3 +780,53 @@ const TeacherDashboard = () => {
 };
 
 export default TeacherDashboard;
+
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  setSubmitStatus("");
+
+  if (!validateForm()) {
+    setIsSubmitting(false);
+    setSubmitStatus("error");
+    return;
+  }
+
+  try {
+    // Prepare course data
+    const courseData = {
+      id: Date.now().toString(),
+      teacherId: user.id,
+      instructor: user.name,
+      title: courseData.title,
+      description: courseData.description,
+      category: courseData.category,
+      level: courseData.level,
+      duration: courseData.duration,
+      price: courseData.price === 'paid' ? courseData.customPrice : 0,
+      status: 'PENDING_REVIEW',
+      submittedDate: new Date().toISOString(),
+      modules: modules,
+      quizzes: quizzes,
+      students: 0,
+      rating: 0,
+      reviews: [],
+      thumbnail: courseData.coverImage ? URL.createObjectURL(courseData.coverImage) : ''
+    };
+
+    // Save to localStorage
+    const existingCourses = localStorageService.getCourses() || [];
+    localStorageService.saveCourses([...existingCourses, courseData]);
+
+    setSubmitStatus("success");
+    alert("Kursus berhasil dibuat! Status: Menunggu Review");
+  } catch (error) {
+    setSubmitStatus("error");
+    setErrors({
+      submit: "Terjadi kesalahan saat membuat kursus. Silakan coba lagi."
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};

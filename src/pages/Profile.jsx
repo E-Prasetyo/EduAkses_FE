@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { localStorageService } from "../services/localStorageService";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -11,8 +12,9 @@ const Profile = () => {
     email: user?.email || "",
     bio: user?.bio || "Belum ada bio",
     role: user?.role === "admin" ? "Admin" : user?.role === "teacher" ? "Pengajar" : "Pelajar",
-    avatar: user?.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    joinDate: user?.joinDate || "Januari 2024",
+    avatar: user?.avatar || "",
+    joinDate: user?.joinDate || user?.createdAt ? new Date(user.createdAt).toLocaleDateString("id-ID", { year: 'numeric', month: 'long' }) : "Januari 2024",
+    specialization: user?.specialization || "",
   });
 
   const [editData, setEditData] = useState({ ...profileData });
@@ -26,9 +28,23 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      await updateProfile(editData);
-      setProfileData(editData);
+      // Pastikan role tidak berubah ke string display
+      const fixedEditData = { ...editData, role: user.role };
+      
+      // Simpan ke localStorage users terlebih dahulu
+      const success = localStorageService.updateUser(user.id, { ...user, ...fixedEditData });
+      
+      if (!success) {
+        throw new Error("Gagal menyimpan data ke localStorage");
+      }
+      
+      // Update profile melalui AuthContext
+      await updateProfile(fixedEditData);
+      
+      setProfileData(fixedEditData);
       setIsEditing(false);
+      
+      alert("Profil berhasil diperbarui!");
     } catch (error) {
       alert(error.message);
     }
@@ -42,7 +58,15 @@ const Profile = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // In real app, upload to cloud storage and get URL
+      // Validasi ukuran file minimal 30KB dan maksimal 300KB
+      if (file.size < 30 * 1024) {
+        alert('Ukuran file terlalu kecil. Minimal 30KB.');
+        return;
+      }
+      if (file.size > 300 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal 300KB.');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         setEditData({
@@ -52,6 +76,13 @@ const Profile = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveAvatar = () => {
+    setEditData({
+      ...editData,
+      avatar: '',
+    });
   };
 
   const handleLogout = () => {
@@ -65,32 +96,41 @@ const Profile = () => {
       <div className="bg-dark text-white rounded-2xl p-4 p-md-5 mb-4">
         <div className="row align-items-center">
           <div className="col-auto">
-            <div className="position-relative">
-              <img
-                src={isEditing ? editData.avatar : profileData.avatar}
-                alt="Profile"
-                className="rounded-circle border border-white border-4"
-                width="96"
-                height="96"
-                style={{ objectFit: "cover" }}
-              />
+            <div className="position-relative d-flex flex-column align-items-center">
+              {((isEditing ? editData.avatar : profileData.avatar)) ? (
+                <img
+                  src={isEditing ? editData.avatar : profileData.avatar}
+                  alt="Profile"
+                  className="rounded-circle border border-white border-4"
+                  width="96"
+                  height="96"
+                  style={{ objectFit: "cover" }}
+                />
+              ) : null}
+              {!(isEditing ? editData.avatar : profileData.avatar) && (
+                <div className="rounded-circle border border-white border-4 d-flex align-items-center justify-content-center bg-light text-secondary" style={{ width: 96, height: 96, fontWeight: 600, fontSize: 16, minHeight: 96 }}>
+                  Foto Profil
+                </div>
+              )}
               {isEditing && (
-                <label className="position-absolute bottom-0 end-0 btn btn-edu-primary btn-sm rounded-circle p-2">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="white"
+                <div className="d-flex flex-column align-items-center mt-2 gap-2">
+                  <label className="btn btn-outline-primary btn-sm mb-0">
+                    Ganti Foto Profil
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      className="d-none"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={handleRemoveAvatar}
                   >
-                    <path d="M8 0L6.545 1.455L12.09 7H0v2h12.09L6.545 14.545L8 16l8-8L8 0z" />
-                  </svg>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="d-none"
-                  />
-                </label>
+                    Hapus Foto Profil
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -180,6 +220,32 @@ const Profile = () => {
                   )}
                 </div>
 
+                {isEditing && user?.role === "teacher" && (
+                  <div className="col-12">
+                    <label className="form-label fw-medium text-dark">
+                      Spesialisasi
+                    </label>
+                    <input
+                      type="text"
+                      name="specialization"
+                      value={editData.specialization}
+                      onChange={handleInputChange}
+                      className="form-control h-12"
+                      placeholder="Contoh: Matematika, Fisika, dll."
+                    />
+                  </div>
+                )}
+                {!isEditing && user?.role === "teacher" && (
+                  <div className="col-12">
+                    <label className="form-label fw-medium text-dark">
+                      Spesialisasi
+                    </label>
+                    <p className="text-dark py-2 mb-0">
+                      {profileData.specialization || '-'}
+                    </p>
+                  </div>
+                )}
+
                 {isEditing && (
                   <div className="col-12 pt-3">
                     <div className="d-flex gap-3">
@@ -226,26 +292,6 @@ const Profile = () => {
                     )}
                     <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
                       ⚙️ Pengaturan Akun
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Account Security */}
-            <div className="col-12">
-              <div className="card bg-edu-white-grey border-0">
-                <div className="card-body p-4">
-                  <h3 className="h5 font-exo fw-semibold mb-4">Keamanan</h3>
-                  <div className="d-flex flex-column gap-2">
-                    <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
-                      🔐 Ubah Password
-                    </button>
-                    <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
-                      📱 Autentikasi 2 Faktor
-                    </button>
-                    <button className="btn btn-light text-start p-3 border-0 rounded font-jost">
-                      🔒 Log Aktivitas
                     </button>
                     <button
                       onClick={handleLogout}

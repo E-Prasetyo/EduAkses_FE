@@ -1,7 +1,11 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
 import Footer from "../components/Footer";
+import { useAuth } from "../contexts/AuthContext";
+import { localStorageService } from "../services/localStorageService";
+
+const TINYMCE_API_KEY = import.meta.env.VITE_TINYMCE_API_KEY;
 
 // Helper function to extract YouTube video ID from URL
 const extractYouTubeVideoId = (url) => {
@@ -14,20 +18,25 @@ const extractYouTubeVideoId = (url) => {
 };
 
 const CreateCourse = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
-    category: "",
+    category: "Teknologi",
     coverImage: null,
     level: "Pemula",
     duration: "",
     price: "free",
     customPrice: "",
+    status: "DRAFT"
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
+  const [showModuleForm, setShowModuleForm] = useState(false);
+  const [basicInfoSaved, setBasicInfoSaved] = useState(false);
 
   const [modules, setModules] = useState([
     {
@@ -47,6 +56,58 @@ const CreateCourse = () => {
     },
   ]);
 
+  const [categories, setCategories] = useState([
+    "Teknologi",
+    "Seni & Desain",
+    "Bisnis",
+    "Literasi & Kewirausahaan",
+    "Pengembangan Diri",
+  ]);
+
+  useEffect(() => {
+    const storedCategories = localStorageService.getCategories();
+    if (storedCategories && storedCategories.length > 0) {
+      setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    }
+  }, []);
+
+  const handleSaveBasicInfo = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+
+    // Validasi informasi dasar
+    if (!courseData.title.trim()) {
+      newErrors.title = "Judul kursus wajib diisi";
+    }
+    if (!courseData.description.trim()) {
+      newErrors.description = "Deskripsi kursus wajib diisi";
+    }
+    if (!courseData.category) {
+      newErrors.category = "Kategori wajib dipilih";
+    }
+    if (!courseData.duration.trim()) {
+      newErrors.duration = "Durasi kursus wajib diisi";
+    }
+    if (courseData.price === "paid" && !courseData.customPrice) {
+      newErrors.customPrice = "Harga kursus wajib diisi";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      try {
+        // Simulasi penyimpanan ke server
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setBasicInfoSaved(true);
+        setShowModuleForm(true);
+      } catch (error) {
+        setErrors({
+          submit: "Terjadi kesalahan saat menyimpan informasi dasar. Silakan coba lagi."
+        });
+      }
+    }
+  };
+
   const [quizzes, setQuizzes] = useState([]);
   const [currentQuiz, setCurrentQuiz] = useState({
     title: "",
@@ -63,22 +124,6 @@ const CreateCourse = () => {
     ],
   });
 
-  const categories = [
-    "Teknologi",
-    "Pengembangan Diri",
-    "Literasi & Kewirausahaan",
-    "Bahasa",
-    "Seni & Desain",
-    "Bisnis",
-  ];
-
-  const extractYouTubeId = (url) => {
-    const regex =
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : url;
-  };
-
   const handleInputChange = (e) => {
     setCourseData({
       ...courseData,
@@ -93,13 +138,43 @@ const CreateCourse = () => {
     });
   };
 
-  const handleImageUpload = (e) => {
+  // Tambahkan fungsi konversi file ke base64
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setCourseData({
-        ...courseData,
-        coverImage: file,
-      });
+      try {
+        // Validasi ukuran file (max 300KB)
+        if (file.size > 300 * 1024) {
+          alert('Ukuran file terlalu besar. Maksimal 300KB.');
+          return;
+        }
+
+        // Validasi tipe file
+        if (!file.type.startsWith('image/')) {
+          alert('File harus berupa gambar.');
+          return;
+        }
+
+        const base64 = await toBase64(file);
+        setCourseData({
+          ...courseData,
+          coverImage: base64,
+          thumbnail: base64,
+          image: base64, // Pastikan image juga diisi
+        });
+        
+        console.log('Image uploaded successfully:', { fileName: file.name, size: file.size });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Gagal mengupload gambar. Silakan coba lagi.');
+      }
     }
   };
 
@@ -155,8 +230,9 @@ const CreateCourse = () => {
       if (mIndex === moduleIndex) {
         const updatedLessons = module.lessons.map((lesson, lIndex) => {
           if (lIndex === lessonIndex) {
-            if (field === "videoUrl") {
-              value = extractYouTubeId(value);
+            // Jika field adalah videoUrl, extract YouTube ID
+            if (field === "videoUrl" && value) {
+              value = extractYouTubeVideoId(value);
             }
             return { ...lesson, [field]: value };
           }
@@ -311,25 +387,77 @@ const CreateCourse = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitStatus("");
-
-    if (!validateForm()) {
-      setIsSubmitting(false);
-      setSubmitStatus("error");
-      return;
-    }
 
     try {
-      // Di sini akan ditambahkan logika untuk mengirim data ke server
-      // Untuk sementara kita simulasikan proses async
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!user) {
+        throw new Error('Anda harus login sebagai pengajar untuk membuat kursus.');
+      }
 
-      setSubmitStatus("success");
-      alert("Kursus berhasil dibuat! Status: Menunggu Review");
+      if (!validateForm()) {
+        throw new Error('Mohon lengkapi semua field yang wajib diisi.');
+      }
+
+      // Prepare course data
+      const newCourse = {
+        id: Date.now().toString(),
+        teacherId: user.id,
+        instructor: user.name,
+        title: courseData.title,
+        description: courseData.description,
+        category: courseData.category,
+        level: courseData.level,
+        duration: courseData.duration,
+        price: courseData.price === 'paid' ? parseInt(courseData.customPrice) : 0,
+        status: 'PENDING_REVIEW',
+        submittedDate: new Date().toISOString(),
+        modules: modules,
+        quizzes: quizzes,
+        students: 0,
+        rating: 0,
+        reviews: [],
+        thumbnail: courseData.coverImage || courseData.thumbnail || courseData.image || '',
+        coverImage: courseData.coverImage || courseData.thumbnail || courseData.image || '',
+        image: courseData.coverImage || courseData.thumbnail || courseData.image || '',
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        overview: courseData.description.substring(0, 200) + '...',
+        whatYouLearn: []
+      };
+
+      console.log('Creating new course:', newCourse);
+
+      // Save to localStorage
+      const existingCourses = localStorageService.getCourses() || [];
+      const updatedCourses = [...existingCourses, newCourse];
+      const saveResult = localStorageService.saveCourses(updatedCourses);
+      if (!saveResult) {
+        alert('Gagal menyimpan course. Storage penuh atau terjadi error! Silakan hapus course lama atau gunakan gambar yang lebih kecil.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create notification for admin
+      const notifications = localStorageService.getNotifications() || [];
+      const newNotification = {
+        id: Date.now(),
+        userId: 'admin1',
+        courseId: newCourse.id,
+        message: `Kursus baru "${courseData.title}" telah diajukan oleh ${user.name} dan menunggu review`,
+        type: 'NEW_COURSE',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      localStorageService.saveNotifications([...notifications, newNotification]);
+
+      console.log('Course created successfully:', newCourse.id);
+
+      alert('Kursus berhasil dibuat dan sedang menunggu review dari admin!');
+      navigate('/pengajar/dashboard');
     } catch (error) {
-      setSubmitStatus("error");
+      console.error('Error creating course:', error);
       setErrors({
-        submit: "Terjadi kesalahan saat membuat kursus. Silakan coba lagi."
+        submit: error.message || 'Terjadi kesalahan saat membuat kursus. Silakan coba lagi.'
       });
     } finally {
       setIsSubmitting(false);
@@ -499,20 +627,34 @@ const CreateCourse = () => {
                       {courseData.coverImage ? (
                         <div>
                           <img
-                            src={URL.createObjectURL(courseData.coverImage)}
+                            src={courseData.coverImage}
                             alt="Preview"
                             className="img-fluid rounded mb-3"
                             style={{ height: "200px", objectFit: "cover" }}
+                            onError={(e) => {
+                              console.error('Error loading image:', e);
+                              e.target.style.display = 'none';
+                              alert('Gagal memuat gambar. Silakan upload ulang.');
+                            }}
                           />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCourseData({ ...courseData, coverImage: null })
-                            }
-                            className="btn btn-danger btn-sm"
-                          >
-                            Hapus Gambar
-                          </button>
+                          <div className="d-flex gap-2 justify-content-center">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCourseData({ ...courseData, coverImage: null, thumbnail: null, image: null })
+                              }
+                              className="btn btn-danger btn-sm"
+                            >
+                              Hapus Gambar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('coverImage').click()}
+                              className="btn btn-outline-primary btn-sm"
+                            >
+                              Ganti Gambar
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div>
@@ -557,23 +699,23 @@ const CreateCourse = () => {
                   </label>
                   <div>
                     <Editor
+                      apiKey={TINYMCE_API_KEY}
                       tinymceScriptSrc="/tinymce/tinymce.min.js"
                       init={{
-                      height: 300,
-                      menubar: false,
-                      plugins: [
-                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                        'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                      ],
-                      toolbar: 'undo redo | blocks | ' +
-                        'bold italic forecolor | alignleft aligncenter ' +
-                        'alignright alignjustify | bullist numlist outdent indent | ' +
-                        'removeformat | help',
-                      content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-                      promotion: false,
-                      branding: false
-                    }}
+                        height: 300,
+                        menubar: true,
+                        plugins: [
+                          "advlist", "autolink", "lists", "link", "image", "charmap", "preview",
+                          "anchor", "searchreplace", "visualblocks", "code", "fullscreen",
+                          "insertdatetime", "media", "table", "help", "wordcount"
+                        ],
+                        toolbar: "undo redo | formatselect | bold italic backcolor | \
+                          alignleft aligncenter alignright alignjustify | \
+                          bullist numlist outdent indent | removeformat | help",
+                        content_style: "body { font-family: Helvetica, Arial, sans-serif; font-size: 14px }",
+                        promotion: false,
+                        branding: false
+                      }}
                       onEditorChange={(content) => handleDescriptionChange(content)}
                       value={courseData.description}
                       className={errors.description ? 'is-invalid' : ''}
@@ -584,201 +726,213 @@ const CreateCourse = () => {
                   </div>
                 </div>
               </div>
+              <div className="mt-4 d-flex justify-content-end">
+                <button
+                  type="button"
+                  onClick={handleSaveBasicInfo}
+                  className="btn btn-edu-primary"
+                  disabled={basicInfoSaved}
+                >
+                  {basicInfoSaved ? "Informasi Dasar Tersimpan" : "Simpan Informasi Dasar"}
+                </button>
+              </div>
             </div>
 
             {/* Modules and Lessons */}
-            <div className="card border-edu-light-grey rounded-2xl mb-4">
-              <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h2 className="h4 font-exo fw-semibold mb-0">
-                    Kurikulum Kursus
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={addModule}
-                    className="btn btn-edu-green font-jost fw-medium"
-                  >
-                    + Tambah Modul
-                  </button>
-                </div>
-                {errors.modules && (
-                  <div className="alert alert-danger mb-4">{errors.modules}</div>
-                )}
+            {showModuleForm && (
+              <div className="card border-edu-light-grey rounded-2xl mb-4">
+                <div className="card-body p-4">
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h2 className="h4 font-exo fw-semibold mb-0">
+                      Kurikulum Kursus
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={addModule}
+                      className="btn btn-edu-green font-jost fw-medium"
+                    >
+                      + Tambah Modul
+                    </button>
+                  </div>
+                  {errors.modules && (
+                    <div className="alert alert-danger mb-4">{errors.modules}</div>
+                  )}
 
-                <div className="row g-4">
-                  {modules.map((module, moduleIndex) => (
-                    <div key={module.id} className="col-12">
-                      <div className="card border">
-                        <div className="card-body p-4">
-                          <div className="d-flex align-items-center gap-3 mb-3">
-                            <div
-                              className="bg-edu-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-semibold"
-                              style={{ width: "32px", height: "32px" }}
-                            >
-                              {moduleIndex + 1}
-                            </div>
-                            <div className="flex-grow-1">
-                              <input
-                                type="text"
-                                value={module.title}
-                                onChange={(e) =>
-                                  updateModule(
-                                    moduleIndex,
-                                    "title",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="Judul Modul"
-                                className={`form-control h-10 ${errors[`module_${moduleIndex}_title`] ? 'is-invalid' : ''}`}
-                              />
-                              {errors[`module_${moduleIndex}_title`] && (
-                                <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_title`]}</div>
+                  <div className="row g-4">
+                    {modules.map((module, moduleIndex) => (
+                      <div key={module.id} className="col-12">
+                        <div className="card border">
+                          <div className="card-body p-4">
+                            <div className="d-flex align-items-center gap-3 mb-3">
+                              <div
+                                className="bg-edu-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-semibold"
+                                style={{ width: "32px", height: "32px" }}
+                              >
+                                {moduleIndex + 1}
+                              </div>
+                              <div className="flex-grow-1">
+                                <input
+                                  type="text"
+                                  value={module.title}
+                                  onChange={(e) =>
+                                    updateModule(
+                                      moduleIndex,
+                                      "title",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="Judul Modul"
+                                  className={`form-control h-10 ${errors[`module_${moduleIndex}_title`] ? 'is-invalid' : ''}`}
+                                />
+                                {errors[`module_${moduleIndex}_title`] && (
+                                  <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_title`]}</div>
+                                )}
+                              </div>
+                              {modules.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeModule(moduleIndex)}
+                                  className="btn btn-outline-danger btn-sm"
+                                >
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M6 19c0 1.1.9 2 2 2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                  </svg>
+                                </button>
                               )}
                             </div>
-                            {modules.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeModule(moduleIndex)}
-                                className="btn btn-outline-danger btn-sm"
-                              >
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M6 19c0 1.1.9 2 2 2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
 
-                          <textarea
-                            value={module.description}
-                            onChange={(e) =>
-                              updateModule(
-                                moduleIndex,
-                                "description",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Deskripsi modul"
-                            rows={2}
-                            className="form-control mb-4"
-                          />
+                            <textarea
+                              value={module.description}
+                              onChange={(e) =>
+                                updateModule(
+                                  moduleIndex,
+                                  "description",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="Deskripsi modul"
+                              rows={2}
+                              className="form-control mb-4"
+                            />
 
-                          <div className="row g-3">
-                            {module.lessons.map((lesson, lessonIndex) => (
-                              <div key={lesson.id} className="col-12">
-                                <div className="card bg-light border-0">
-                                  <div className="card-body p-3">
-                                    <div className="d-flex align-items-center gap-3 mb-3">
-                                      <span className="small fw-medium text-muted">
-                                        Pelajaran {lessonIndex + 1}
-                                      </span>
-                                      <div className="flex-grow-1">
-                                        <input
-                                          type="text"
-                                          value={lesson.title}
+                            <div className="row g-3">
+                              {module.lessons.map((lesson, lessonIndex) => (
+                                <div key={lesson.id} className="col-12">
+                                  <div className="card bg-light border-0">
+                                    <div className="card-body p-3">
+                                      <div className="d-flex align-items-center gap-3 mb-3">
+                                        <span className="small fw-medium text-muted">
+                                          Pelajaran {lessonIndex + 1}
+                                        </span>
+                                        <div className="flex-grow-1">
+                                          <input
+                                            type="text"
+                                            value={lesson.title}
+                                            onChange={(e) =>
+                                              updateLesson(
+                                                moduleIndex,
+                                                lessonIndex,
+                                                "title",
+                                                e.target.value,
+                                              )
+                                            }
+                                            placeholder="Judul Pelajaran"
+                                            className={`form-control form-control-sm ${errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`] ? 'is-invalid' : ''}`}
+                                          />
+                                          {errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`] && (
+                                            <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`]}</div>
+                                          )}
+                                        </div>
+                                        <select
+                                          value={lesson.type}
                                           onChange={(e) =>
                                             updateLesson(
                                               moduleIndex,
                                               lessonIndex,
-                                              "title",
+                                              "type",
                                               e.target.value,
                                             )
                                           }
-                                          placeholder="Judul Pelajaran"
-                                          className={`form-control form-control-sm ${errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`] ? 'is-invalid' : ''}`}
-                                        />
-                                        {errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`] && (
-                                          <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_title`]}</div>
-                                        )}
-                                      </div>
-                                      <select
-                                        value={lesson.type}
-                                        onChange={(e) =>
-                                          updateLesson(
-                                            moduleIndex,
-                                            lessonIndex,
-                                            "type",
-                                            e.target.value,
-                                          )
-                                        }
-                                        className="form-select form-select-sm"
-                                        style={{ width: "auto" }}
-                                      >
-                                        <option value="text">Teks</option>
-                                        <option value="video">Video</option>
-                                      </select>
-                                      {module.lessons.length > 1 && (
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            removeLesson(
-                                              moduleIndex,
-                                              lessonIndex,
-                                            )
-                                          }
-                                          className="btn btn-outline-danger btn-sm"
+                                          className="form-select form-select-sm"
+                                          style={{ width: "auto" }}
                                         >
-                                          <svg
-                                            width="12"
-                                            height="12"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                          >
-                                            <path d="M6 19c0 1.1.9 2 2 2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-                                          </svg>
-                                        </button>
-                                      )}
-                                    </div>
-
-                                    {lesson.type === "text" ? (
-                                      <div className="mb-3">
-                                        <label className="form-label small fw-medium">
-                                          Konten Pelajaran
-                                        </label>
-                                        <div>
-                                          <Editor
-                                            key={`lesson-${moduleIndex}-${lessonIndex}`}
-                                            init={{
-                                            height: 250,
-                                            menubar: false,
-                                            plugins: [
-                                              'advlist', 'autolink', 'lists', 'link', 'image',
-                                              'charmap', 'preview', 'anchor', 'searchreplace',
-                                              'visualblocks', 'code', 'fullscreen', 'insertdatetime',
-                                              'media', 'table', 'help', 'wordcount'
-                                            ],
-                                            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | code | removeformat | help',
-                                            content_style: 'body { font-family: Jost, sans-serif; font-size: 14px }',
-                                            promotion: false,
-                                            branding: false
-                                          }}
-                                          value={lesson.textContent}
-                                            onEditorChange={(content) =>
-                                              updateLesson(
+                                          <option value="text">Teks</option>
+                                          <option value="video">Video</option>
+                                        </select>
+                                        {module.lessons.length > 1 && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              removeLesson(
                                                 moduleIndex,
                                                 lessonIndex,
-                                                "textContent",
-                                                content
                                               )
                                             }
-                                            className={errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`] ? 'is-invalid' : ''}
-                                          />
-                                          {errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`] && (
-                                            <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`]}</div>
-                                          )}
-                                        </div>
+                                            className="btn btn-outline-danger btn-sm"
+                                          >
+                                            <svg
+                                              width="12"
+                                              height="12"
+                                              viewBox="0 0 24 24"
+                                              fill="currentColor"
+                                            >
+                                              <path d="M6 19c0 1.1.9 2 2 2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                                            </svg>
+                                          </button>
+                                        )}
                                       </div>
-                                    ) : (
-                                      <div className="row g-3">
-                                        <div className="col-md-8">
+
+                                      {lesson.type === "text" ? (
+                                        <div className="mb-3">
                                           <label className="form-label small fw-medium">
-                                            URL YouTube
+                                            Konten Pelajaran
                                           </label>
                                           <div>
+                                            <Editor
+                                              apiKey={TINYMCE_API_KEY}
+                                              key={`lesson-${moduleIndex}-${lessonIndex}`}
+                                              init={{
+                                                height: 300,
+                                                menubar: true,
+                                                plugins: [
+                                                  "advlist", "autolink", "lists", "link", "image", "charmap", "preview",
+                                                  "anchor", "searchreplace", "visualblocks", "code", "fullscreen",
+                                                  "insertdatetime", "media", "table", "help", "wordcount"
+                                                ],
+                                                toolbar: "undo redo | formatselect | bold italic backcolor | \
+                                                  alignleft aligncenter alignright alignjustify | \
+                                                  bullist numlist outdent indent | removeformat | help",
+                                                content_style: "body { font-family: Helvetica, Arial, sans-serif; font-size: 14px }",
+                                                promotion: false,
+                                                branding: false
+                                              }}
+                                              value={lesson.textContent}
+                                              onEditorChange={(content) =>
+                                                updateLesson(
+                                                  moduleIndex,
+                                                  lessonIndex,
+                                                  "textContent",
+                                                  content
+                                                )
+                                              }
+                                              className={errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`] ? 'is-invalid' : ''}
+                                            />
+                                            {errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`] && (
+                                              <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_content`]}</div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="row g-3">
+                                          <div className="col-md-8">
+                                            <label className="form-label small fw-medium">
+                                              URL Video YouTube
+                                            </label>
                                             <input
                                               type="text"
                                               value={lesson.videoUrl}
@@ -790,74 +944,55 @@ const CreateCourse = () => {
                                                   e.target.value,
                                                 )
                                               }
-                                              placeholder="https://www.youtube.com/watch?v=..."
+                                              placeholder="Masukkan URL atau ID video YouTube"
                                               className={`form-control form-control-sm ${errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`] ? 'is-invalid' : ''}`}
                                             />
                                             {errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`] && (
-                                              <div className="invalid-feedback">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`]}</div>
+                                              <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`]}</div>
                                             )}
+                                           {/* Preview embed jika ID valid */}
+                                           {lesson.videoUrl && extractYouTubeVideoId(lesson.videoUrl) && (
+                                             <div className="mt-2 ratio ratio-16x9">
+                                               <iframe
+                                                 src={`https://www.youtube.com/embed/${extractYouTubeVideoId(lesson.videoUrl)}`}
+                                                 title="YouTube video preview"
+                                                 allowFullScreen
+                                               ></iframe>
+                                             </div>
+                                           )}
                                           </div>
-                                          {lesson.videoUrl && (
-                                            <div className="mt-2">
-                                              {extractYouTubeVideoId(
-                                                lesson.videoUrl,
-                                              ) ? (
-                                                <div className="ratio ratio-16x9">
-                                                  <iframe
-                                                    src={`https://www.youtube.com/embed/${extractYouTubeVideoId(lesson.videoUrl)}`}
-                                                    title="YouTube video preview"
-                                                    frameBorder="0"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                    className="rounded"
-                                                  ></iframe>
-                                                </div>
-                                              ) : (
-                                                <div className="alert alert-warning small">
-                                                  <strong>
-                                                    URL tidak valid!
-                                                  </strong>{" "}
-                                                  Masukkan URL YouTube yang
-                                                  valid.
-                                                  <br />
-                                                  Contoh:
-                                                  https://www.youtube.com/watch?v=dQw4w9WgXcQ
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
+                                          <div className="col-md-4">
+                                            <label className="form-label small fw-medium">
+                                              Durasi Video
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={lesson.duration}
+                                              onChange={(e) =>
+                                                updateLesson(
+                                                  moduleIndex,
+                                                  lessonIndex,
+                                                  "duration",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              placeholder="Contoh: 10:30"
+                                              className="form-control form-control-sm"
+                                            />
+                                          </div>
                                         </div>
-                                        <div className="col-md-4">
-                                          <label className="form-label small fw-medium">
-                                            Durasi
-                                          </label>
-                                          <input
-                                            type="text"
-                                            value={lesson.duration}
-                                            onChange={(e) =>
-                                              updateLesson(
-                                                moduleIndex,
-                                                lessonIndex,
-                                                "duration",
-                                                e.target.value,
-                                              )
-                                            }
-                                            placeholder="15 menit"
-                                            className="form-control form-control-sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
 
-                            <div className="col-12">
+                            <div className="mt-3">
                               <button
                                 type="button"
                                 onClick={() => addLesson(moduleIndex)}
-                                className="btn btn-outline-primary w-100 border-2 border-dashed"
+                                className="btn btn-outline-primary btn-sm"
                               >
                                 + Tambah Pelajaran
                               </button>
@@ -865,11 +1000,11 @@ const CreateCourse = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Submit */}
             <div className="d-flex justify-content-end gap-3">
@@ -897,8 +1032,6 @@ const CreateCourse = () => {
           </form>
         </div>
       </main>
-
-
     </div>
   );
 };

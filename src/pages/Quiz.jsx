@@ -1,87 +1,77 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import { localStorageService } from "../services/localStorageService";
+import { useAuth } from "../contexts/AuthContext";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const Quiz = () => {
-  const { id, quizId } = useParams();
+  const { user } = useAuth();
+  const { courseId, quizId } = useParams();
+  const [quiz, setQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retryCooldown, setRetryCooldown] = useState(0);
+  const [lastAttemptTime, setLastAttemptTime] = useState(null);
 
-  // Mock quiz data - would come from backend with randomized questions
-  const quiz = {
-    id: quizId,
-    title: "Kuis Modul 1: Pengenalan Komputer",
-    timeLimit: 600, // 10 minutes
-    questions: [
-      {
-        id: 1,
-        question: "Apa kepanjangan dari CPU?",
-        type: "multiple-choice",
-        options: [
-          "Computer Processing Unit",
-          "Central Processing Unit",
-          "Central Program Unit",
-          "Computer Program Unit",
-        ],
-        correctAnswer: 1,
-        explanation:
-          "CPU adalah singkatan dari Central Processing Unit, yang merupakan unit pemrosesan pusat dalam komputer.",
-      },
-      {
-        id: 2,
-        question: "Manakah yang termasuk perangkat input?",
-        type: "multiple-choice",
-        options: ["Monitor", "Printer", "Keyboard", "Speaker"],
-        correctAnswer: 2,
-        explanation:
-          "Keyboard adalah perangkat input yang digunakan untuk memasukkan data ke dalam komputer.",
-      },
-      {
-        id: 3,
-        question: "Apa fungsi utama RAM dalam komputer?",
-        type: "multiple-choice",
-        options: [
-          "Menyimpan data secara permanen",
-          "Memproses data",
-          "Menyimpan data sementara saat komputer berjalan",
-          "Menampilkan data di layar",
-        ],
-        correctAnswer: 2,
-        explanation:
-          "RAM (Random Access Memory) berfungsi sebagai memori sementara yang menyimpan data dan program yang sedang digunakan.",
-      },
-      {
-        id: 4,
-        question: "Mana pernyataan yang benar tentang perbedaan HDD dan SSD?",
-        type: "multiple-choice",
-        options: [
-          "HDD lebih cepat dari SSD",
-          "SSD menggunakan piringan berputar",
-          "SSD lebih cepat dan tidak ada bagian yang bergerak",
-          "HDD dan SSD memiliki kecepatan yang sama",
-        ],
-        correctAnswer: 2,
-        explanation:
-          "SSD (Solid State Drive) lebih cepat dari HDD karena menggunakan memori flash dan tidak memiliki bagian mekanis yang bergerak.",
-      },
-      {
-        id: 5,
-        question: "Apa yang dimaksud dengan sistem operasi?",
-        type: "multiple-choice",
-        options: [
-          "Program untuk membuat dokumen",
-          "Perangkat keras komputer",
-          "Software yang mengelola sumber daya komputer",
-          "Program untuk browsing internet",
-        ],
-        correctAnswer: 2,
-        explanation:
-          "Sistem operasi adalah perangkat lunak yang mengelola sumber daya komputer dan menyediakan platform untuk program lain berjalan.",
-      },
-    ],
-  };
+  useEffect(() => {
+    if (!user || !user.id) {
+      console.log('User belum ready:', user);
+      return;
+    }
+    console.log("Quiz component - courseId:", courseId, "quizId:", quizId, "user.id:", user.id);
+    
+    // Ambil quiz dari localStorageService
+    const course = localStorageService.getCourseById(courseId);
+    console.log("Found course:", course);
+    
+    let foundQuiz = null;
+    
+    if (course && course.modules) {
+      console.log("Course modules:", course.modules);
+      for (let moduleIndex = 0; moduleIndex < course.modules.length; moduleIndex++) {
+        const module = course.modules[moduleIndex];
+        console.log(`Module ${moduleIndex}:`, module);
+        if (module.quizzes) {
+          console.log(`Module ${moduleIndex} quizzes:`, module.quizzes);
+          foundQuiz = module.quizzes.find(q => {
+            console.log("Comparing quiz:", q.id, "with quizId:", quizId);
+            return q.id === quizId || q.id === Number(quizId) || String(q.id) === String(quizId);
+          });
+          if (foundQuiz) {
+            console.log("Found quiz:", foundQuiz);
+            foundQuiz.moduleIndex = moduleIndex;
+            break;
+          }
+        }
+      }
+    }
+    
+    console.log("Final found quiz:", foundQuiz);
+    setQuiz(foundQuiz);
+    
+    // Set timer berdasarkan quiz yang ditemukan
+    if (foundQuiz) {
+      setTimeLeft(foundQuiz.timeLimit || 600);
+    }
+    
+    // Cek apakah ada attempt terakhir dan hitung cooldown
+    const lastAttempt = localStorage.getItem(`quiz_attempt_${quizId}_${user.id}`);
+    if (lastAttempt) {
+      const attemptTime = parseInt(lastAttempt);
+      const now = Date.now();
+      const timeDiff = now - attemptTime;
+      const cooldownTime = 60000; // 1 menit dalam milidetik
+      
+      if (timeDiff < cooldownTime) {
+        setRetryCooldown(Math.ceil((cooldownTime - timeDiff) / 1000));
+        setLastAttemptTime(attemptTime);
+      }
+    }
+  }, [courseId, quizId, user.id]);
 
   // Timer effect
   useEffect(() => {
@@ -92,6 +82,14 @@ const Quiz = () => {
       handleSubmit();
     }
   }, [timeLeft, showResults]);
+
+  // Retry cooldown timer
+  useEffect(() => {
+    if (retryCooldown > 0) {
+      const timer = setTimeout(() => setRetryCooldown(retryCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [retryCooldown]);
 
   // Format time display
   const formatTime = (seconds) => {
@@ -121,12 +119,32 @@ const Quiz = () => {
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-
     setShowResults(true);
     setIsSubmitting(false);
+    
+    // Simpan waktu attempt
+    localStorage.setItem(`quiz_attempt_${quizId}_${user.id}`, Date.now().toString());
+    
+    // Update progress/enrollment jika lulus
+    const score = calculateScore();
+    const passingScore = quiz.passingScore || 70;
+    
+    if (score.percentage >= passingScore) {
+      // Simpan hasil quiz ke progress
+      const progress = localStorageService.getCourseProgress(user.id, courseId);
+      const newCompletedQuizzes = [...(progress.completedQuizzes || []), `${quiz.moduleIndex}-${quizId}`];
+      
+      localStorageService.updateProgress(
+        user.id, 
+        courseId, 
+        progress.progress || 0, 
+        progress.completedLessons || [],
+        newCompletedQuizzes
+      );
+      
+      localStorageService.completeCourse(user.id, courseId);
+    }
   };
 
   const calculateScore = () => {
@@ -144,286 +162,344 @@ const Quiz = () => {
   };
 
   const score = showResults ? calculateScore() : null;
+  const passingScore = quiz?.passingScore || 70;
+  const isPassed = score && score.percentage >= passingScore;
+
+  if (!quiz) {
+    return (
+      <div className="min-vh-100 d-flex flex-column bg-light">
+
+        <div className="d-flex justify-content-center align-items-center flex-grow-1">
+          <div className="alert alert-danger">
+            Quiz tidak ditemukan atau sudah dihapus.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showResults) {
     return (
-      <div className="flex flex-col bg-white min-h-screen">
-        <Header />
+      <div className="min-vh-100 d-flex flex-column bg-light">
 
-        <main className="flex-1 py-12">
-          <div className="max-w-4xl mx-auto px-4">
-            {/* Results Header */}
-            <div className="text-center mb-8">
-              <h1 className="font-exo font-bold text-3xl mb-4">Hasil Kuis</h1>
-              <div
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-lg font-semibold ${
-                  score.percentage >= 70
-                    ? "bg-edu-green text-white"
-                    : "bg-red-500 text-white"
-                }`}
-              >
-                {score.percentage >= 70 ? "🎉 Selamat!" : "😔 Coba Lagi"}
-                <span>
-                  Skor: {score.correct}/{score.total} ({score.percentage}%)
-                </span>
-              </div>
-            </div>
-
-            {/* Score Details */}
-            <div className="bg-edu-white-grey p-8 rounded-2xl mb-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div>
-                  <div className="text-3xl font-bold text-edu-green">
-                    {score.correct}
-                  </div>
-                  <div className="text-edu-dark-gray">Jawaban Benar</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-red-500">
-                    {score.total - score.correct}
-                  </div>
-                  <div className="text-edu-dark-gray">Jawaban Salah</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-edu-primary">
-                    {score.percentage}%
-                  </div>
-                  <div className="text-edu-dark-gray">Skor Akhir</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Question Review */}
-            <div className="space-y-6 mb-8">
-              <h2 className="font-exo font-semibold text-2xl">
-                Review Jawaban
-              </h2>
-              {quiz.questions.map((question, index) => {
-                const userAnswer = selectedAnswers[index];
-                const isCorrect = userAnswer === question.correctAnswer;
-
-                return (
+        <main className="flex-grow-1 py-8">
+          <div className="container">
+            <div className="row justify-content-center">
+              <div className="col-lg-8">
+                {/* Results Header */}
+                <div className="text-center mb-6">
+                  <h1 className="display-5 fw-bold text-black mb-4">Hasil Kuis</h1>
                   <div
-                    key={question.id}
-                    className="bg-white border border-edu-light-grey rounded-2xl p-6"
+                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-lg font-semibold ${
+                      isPassed
+                        ? "bg-success text-white"
+                        : "bg-danger text-white"
+                    }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold ${
-                          isCorrect ? "bg-edu-green" : "bg-red-500"
-                        }`}
-                      >
-                        {isCorrect ? "✓" : "✗"}
+                    {isPassed ? "🎉 Selamat!" : "😔 Coba Lagi"}
+                    <span>
+                      Skor: {score.correct}/{score.total} ({score.percentage}%)
+                    </span>
+                  </div>
+                  <p className="text-muted mt-2">
+                    Nilai minimum lulus: {passingScore}%
+                  </p>
+                </div>
+
+                {/* Score Details */}
+                <div className="card shadow-sm border-0 rounded-lg mb-6">
+                  <div className="card-body">
+                    <div className="row text-center">
+                      <div className="col-md-4">
+                        <div className="h2 fw-bold text-success mb-2">
+                          {score.correct}
+                        </div>
+                        <div className="text-muted">Jawaban Benar</div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-exo font-semibold text-lg mb-3">
-                          {index + 1}. {question.question}
-                        </h3>
-
-                        <div className="space-y-2 mb-4">
-                          {question.options.map((option, optionIndex) => (
-                            <div
-                              key={optionIndex}
-                              className={`p-3 rounded-lg border ${
-                                optionIndex === question.correctAnswer
-                                  ? "bg-edu-green text-white border-edu-green"
-                                  : optionIndex === userAnswer && !isCorrect
-                                    ? "bg-red-100 border-red-300"
-                                    : "bg-gray-50 border-gray-200"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                                    optionIndex === question.correctAnswer
-                                      ? "border-white bg-white"
-                                      : optionIndex === userAnswer && !isCorrect
-                                        ? "border-red-500"
-                                        : "border-gray-300"
-                                  }`}
-                                >
-                                  {optionIndex === question.correctAnswer && (
-                                    <div className="w-3 h-3 bg-edu-green rounded-full"></div>
-                                  )}
-                                  {optionIndex === userAnswer && !isCorrect && (
-                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                                  )}
-                                </div>
-                                <span
-                                  className={
-                                    optionIndex === question.correctAnswer
-                                      ? "text-white font-medium"
-                                      : ""
-                                  }
-                                >
-                                  {option}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
+                      <div className="col-md-4">
+                        <div className="h2 fw-bold text-danger mb-2">
+                          {score.total - score.correct}
                         </div>
-
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="font-semibold text-blue-800 mb-1">
-                            Penjelasan:
-                          </div>
-                          <div className="text-blue-700">
-                            {question.explanation}
-                          </div>
+                        <div className="text-muted">Jawaban Salah</div>
+                      </div>
+                      <div className="col-md-4">
+                        <div className="h2 fw-bold text-primary mb-2">
+                          {score.percentage}%
                         </div>
+                        <div className="text-muted">Skor Akhir</div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
 
-            {/* Actions */}
-            <div className="flex justify-center gap-4">
-              <Link
-                to={`/kursus/${id}/belajar`}
-                className="px-6 py-3 bg-edu-primary text-white rounded-lg font-jost font-medium hover:bg-opacity-90 transition-colors"
-              >
-                Lanjut Belajar
-              </Link>
-              {score.percentage < 70 && (
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-lg font-jost font-medium hover:bg-opacity-90 transition-colors"
-                >
-                  Ulangi Kuis
-                </button>
-              )}
+                {/* Question Review */}
+                <div className="card shadow-sm border-0 rounded-lg mb-6">
+                  <div className="card-header bg-white py-3">
+                    <h5 className="card-title mb-0 fw-bold">
+                      <i className="bi bi-list-check me-2 text-success"></i>
+                      Review Jawaban
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    {quiz.questions.map((question, index) => {
+                      const userAnswer = selectedAnswers[index];
+                      const isCorrect = userAnswer === question.correctAnswer;
+
+                      return (
+                        <div
+                          key={question.id}
+                          className="border rounded-3 p-4 mb-4"
+                        >
+                          <div className="d-flex align-items-start gap-3">
+                            <div
+                              className={`badge rounded-pill px-3 py-2 ${
+                                isCorrect ? "bg-success" : "bg-danger"
+                              }`}
+                            >
+                              {isCorrect ? "✓" : "✗"}
+                            </div>
+                            <div className="flex-grow-1">
+                              <h6 className="fw-bold mb-3">
+                                {index + 1}. {question.question}
+                              </h6>
+
+                              <div className="mb-3">
+                                {question.options.map((option, optionIndex) => (
+                                  <div
+                                    key={optionIndex}
+                                    className={`p-3 rounded-3 border mb-2 ${
+                                      optionIndex === question.correctAnswer
+                                        ? "bg-success text-white border-success"
+                                        : optionIndex === userAnswer && !isCorrect
+                                          ? "bg-danger text-white border-danger"
+                                          : "bg-light border-secondary"
+                                    }`}
+                                  >
+                                    <div className="d-flex align-items-center gap-3">
+                                      <div
+                                        className={`rounded-circle border-2 d-flex align-items-center justify-content-center ${
+                                          optionIndex === question.correctAnswer
+                                            ? "border-white bg-white"
+                                            : optionIndex === userAnswer && !isCorrect
+                                              ? "border-white bg-white"
+                                              : "border-secondary"
+                                        }`}
+                                        style={{ width: '20px', height: '20px' }}
+                                      >
+                                        {optionIndex === question.correctAnswer && (
+                                          <div className="bg-success rounded-circle" style={{ width: '8px', height: '8px' }}></div>
+                                        )}
+                                        {optionIndex === userAnswer && !isCorrect && (
+                                          <div className="bg-danger rounded-circle" style={{ width: '8px', height: '8px' }}></div>
+                                        )}
+                                      </div>
+                                      <span className={optionIndex === question.correctAnswer ? "text-white fw-medium" : ""}>
+                                        {option}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="bg-info bg-opacity-10 border border-info rounded-3 p-3">
+                                <div className="fw-semibold text-info mb-1">
+                                  Penjelasan:
+                                </div>
+                                <div className="text-info">
+                                  {question.explanation}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="d-flex justify-content-center gap-3">
+                  <Link
+                    to={`/belajar/${courseId}`}
+                    className="btn btn-primary btn-lg px-4"
+                  >
+                    <i className="bi bi-arrow-left me-2"></i>
+                    Lanjut Belajar
+                  </Link>
+                  {!isPassed && (
+                    <button
+                      onClick={() => {
+                        if (retryCooldown > 0) {
+                          alert(`Tunggu ${formatTime(retryCooldown)} sebelum mencoba lagi!`);
+                          return;
+                        }
+                        window.location.reload();
+                      }}
+                      disabled={retryCooldown > 0}
+                      className="btn btn-secondary btn-lg px-4"
+                    >
+                      {retryCooldown > 0 ? `Tunggu ${formatTime(retryCooldown)}` : 'Ulangi Kuis'}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </main>
+
+
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col bg-white min-h-screen">
-      <Header />
+    <div className="min-vh-100 d-flex flex-column bg-light">
 
-      <main className="flex-1 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          {/* Quiz Header */}
-          <div className="bg-white border border-edu-light-grey rounded-2xl p-6 mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="font-exo font-bold text-2xl">{quiz.title}</h1>
-              <div
-                className={`px-4 py-2 rounded-lg font-semibold ${
-                  timeLeft <= 60
-                    ? "bg-red-500 text-white"
-                    : "bg-edu-white-grey text-edu-dark-gray"
-                }`}
-              >
-                ⏰ {formatTime(timeLeft)}
-              </div>
-            </div>
 
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <div
-                className="bg-edu-primary h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${((currentQuestion + 1) / quiz.questions.length) * 100}%`,
-                }}
-              ></div>
-            </div>
-
-            <div className="text-edu-dark-gray">
-              Pertanyaan {currentQuestion + 1} dari {quiz.questions.length}
-            </div>
-          </div>
-
-          {/* Question */}
-          <div className="bg-white border border-edu-light-grey rounded-2xl p-8 mb-8">
-            <h2 className="font-exo font-semibold text-xl mb-6">
-              {quiz.questions[currentQuestion].question}
-            </h2>
-
-            <div className="space-y-4">
-              {quiz.questions[currentQuestion].options.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                    selectedAnswers[currentQuestion] === index
-                      ? "border-edu-primary bg-edu-primary bg-opacity-10"
-                      : "border-gray-200 hover:border-edu-primary hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
+      <main className="flex-grow-1 py-8">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              {/* Quiz Header */}
+              <div className="card shadow-sm border-0 rounded-lg mb-6">
+                <div className="card-header bg-white py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h1 className="h3 fw-bold mb-0">{quiz?.title || "Loading..."}</h1>
                     <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        selectedAnswers[currentQuestion] === index
-                          ? "border-edu-primary bg-edu-primary"
-                          : "border-gray-300"
+                      className={`badge rounded-pill px-3 py-2 fw-semibold ${
+                        timeLeft <= 60
+                          ? "bg-danger text-white"
+                          : "bg-primary text-white"
                       }`}
                     >
-                      {selectedAnswers[currentQuestion] === index && (
-                        <div className="w-3 h-3 bg-white rounded-full"></div>
-                      )}
+                      <i className="bi bi-clock me-1"></i>
+                      {formatTime(timeLeft)}
                     </div>
-                    <span className="font-jost text-lg">{option}</span>
                   </div>
-                </button>
-              ))}
-            </div>
-          </div>
+                </div>
+                <div className="card-body">
+                  {/* Progress Bar */}
+                  <div className="progress mb-3" style={{ height: '8px' }}>
+                    <div
+                      className="progress-bar bg-primary"
+                      style={{
+                        width: `${((currentQuestion + 1) / quiz?.questions.length) * 100}%`,
+                      }}
+                    ></div>
+                  </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handlePrev}
-              disabled={currentQuestion === 0}
-              className="px-6 py-3 bg-gray-200 text-gray-600 rounded-lg font-jost font-medium hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              ← Sebelumnya
-            </button>
+                  <div className="text-muted">
+                    Pertanyaan {currentQuestion + 1} dari {quiz?.questions.length || 0}
+                  </div>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2">
-              {quiz.questions.map((_, index) => (
+              {/* Question */}
+              <div className="card shadow-sm border-0 rounded-lg mb-6">
+                <div className="card-body p-5">
+                  <h2 className="h4 fw-bold mb-4">
+                    {quiz?.questions[currentQuestion]?.question || "Loading question..."}
+                  </h2>
+
+                  <div className="space-y-3">
+                    {quiz?.questions[currentQuestion]?.options.map((option, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleAnswerSelect(index)}
+                        className={`w-100 text-start p-4 rounded-3 border-2 transition-colors ${
+                          selectedAnswers[currentQuestion] === index
+                            ? "border-primary bg-primary bg-opacity-10"
+                            : "border-light hover:border-primary hover:bg-light"
+                        }`}
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          <div
+                            className={`rounded-circle border-2 d-flex align-items-center justify-content-center ${
+                              selectedAnswers[currentQuestion] === index
+                                ? "border-primary bg-primary"
+                                : "border-secondary"
+                            }`}
+                            style={{ width: '24px', height: '24px' }}
+                          >
+                            {selectedAnswers[currentQuestion] === index && (
+                              <div className="bg-white rounded-circle" style={{ width: '8px', height: '8px' }}></div>
+                            )}
+                          </div>
+                          <span className="fw-medium">{option}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="d-flex justify-content-between align-items-center">
                 <button
-                  key={index}
-                  onClick={() => setCurrentQuestion(index)}
-                  className={`w-8 h-8 rounded-full font-semibold text-sm transition-colors ${
-                    index === currentQuestion
-                      ? "bg-edu-primary text-white"
-                      : selectedAnswers[index] !== undefined
-                        ? "bg-edu-green text-white"
-                        : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                  }`}
+                  onClick={handlePrev}
+                  disabled={currentQuestion === 0}
+                  className="btn btn-light btn-lg px-4"
                 >
-                  {index + 1}
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Sebelumnya
                 </button>
-              ))}
-            </div>
 
-            {currentQuestion === quiz.questions.length - 1 ? (
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  isSubmitting ||
-                  Object.keys(selectedAnswers).length < quiz.questions.length
-                }
-                className="px-6 py-3 bg-edu-green text-white rounded-lg font-jost font-medium hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? "Mengirim..." : "Selesai"}
-              </button>
-            ) : (
-              <button
-                onClick={handleNext}
-                disabled={selectedAnswers[currentQuestion] === undefined}
-                className="px-6 py-3 bg-edu-primary text-white rounded-lg font-jost font-medium hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Selanjutnya →
-              </button>
-            )}
+                <div className="d-flex gap-2">
+                  {quiz?.questions.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentQuestion(index)}
+                      className={`btn rounded-circle ${
+                        index === currentQuestion
+                          ? "btn-primary"
+                          : selectedAnswers[index] !== undefined
+                            ? "btn-success"
+                            : "btn-outline-secondary"
+                      }`}
+                      style={{ width: '40px', height: '40px' }}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+
+                {currentQuestion === quiz?.questions.length - 1 ? (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={
+                      isSubmitting ||
+                      Object.keys(selectedAnswers).length < quiz?.questions.length
+                    }
+                    className="btn btn-success btn-lg px-4"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Mengirim...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle me-2"></i>
+                        Selesai
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleNext}
+                    disabled={selectedAnswers[currentQuestion] === undefined}
+                    className="btn btn-primary btn-lg px-4"
+                  >
+                    Selanjutnya
+                    <i className="bi bi-arrow-right ms-2"></i>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </main>
+
     </div>
   );
 };

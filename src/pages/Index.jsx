@@ -4,107 +4,49 @@ import CourseCard from "../components/CourseCard";
 import StatsCounter from "../components/StatsCounter";
 import Footer from "../components/Footer";
 
+import { useState, useEffect } from "react";
+import { localStorageService } from "../services/localStorageService";
+
 const Index = () => {
-  const featuredCourses = [
-    {
-      id: 1,
-      title: "Pengantar JavaScript untuk Pemula",
-      description:
-        "Belajar dasar-dasar JavaScript dari nol hingga bisa membuat aplikasi web sederhana.",
-      image:
-        "https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=300&h=200&fit=crop",
-      instructor: "Ahmad Fulan",
-      rating: 4.8,
-      students: 1250,
-      duration: "8 Jam",
-      level: "Pemula",
-      price: "free",
-      category: "Teknologi",
-    },
-    {
-      id: 2,
-      title: "UI/UX Design Fundamentals",
-      description:
-        "Memahami prinsip-prinsip desain UI/UX dan cara membuat wireframe yang efektif.",
-      image:
-        "https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=300&h=200&fit=crop",
-      instructor: "Siti Nurhaliza",
-      rating: 4.9,
-      students: 890,
-      duration: "12 Jam",
-      level: "Menengah",
-      price: "paid",
-      originalPrice: 299000,
-      discountPrice: 199000,
-      category: "Seni & Desain",
-    },
-    {
-      id: 3,
-      title: "Digital Marketing Strategy",
-      description:
-        "Strategi pemasaran digital yang efektif untuk meningkatkan brand awareness dan penjualan.",
-      image:
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=300&h=200&fit=crop",
-      instructor: "Budi Santoso",
-      rating: 4.7,
-      students: 2100,
-      duration: "6 Jam",
-      level: "Pemula",
-      price: "paid",
-      originalPrice: 399000,
-      discountPrice: 249000,
-      category: "Bisnis",
-    },
-    {
-      id: 4,
-      title: "Python untuk Data Science",
-      description:
-        "Belajar Python untuk analisis data dan machine learning dengan library populer.",
-      image:
-        "https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=300&h=200&fit=crop",
-      instructor: "Dr. Maya Sari",
-      rating: 4.9,
-      students: 1567,
-      duration: "15 Jam",
-      level: "Lanjutan",
-      price: "paid",
-      originalPrice: 599000,
-      discountPrice: 399000,
-      category: "Teknologi",
-    },
-    {
-      id: 5,
-      title: "Copywriting untuk Konversi",
-      description:
-        "Teknik menulis copy yang persuasif untuk meningkatkan tingkat konversi.",
-      image:
-        "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=300&h=200&fit=crop",
-      instructor: "Rina Pratiwi",
-      rating: 4.6,
-      students: 743,
-      duration: "4 Jam",
-      level: "Menengah",
-      price: "paid",
-      originalPrice: 199000,
-      discountPrice: 149000,
-      category: "Literasi & Kewirausahaan",
-    },
-    {
-      id: 6,
-      title: "Fotografi untuk Pemula",
-      description:
-        "Dasar-dasar fotografi mulai dari komposisi hingga teknik editing sederhana.",
-      image:
-        "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=300&h=200&fit=crop",
-      instructor: "Joko Anwar",
-      rating: 4.5,
-      students: 967,
-      duration: "7 Jam",
-      level: "Pemula",
-      price: "free",
-      category: "Seni & Desain",
-    },
-  ];
+  const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch courses from localStorage
+    const fetchCourses = () => {
+      setIsLoading(true);
+      try {
+        // Get all courses from localStorage
+        const allCourses = localStorageService.getCourses();
+        
+        // Filter only published courses
+        const publishedCourses = allCourses.filter(course => course.status === "PUBLISHED");
+        
+        // Sort by number of students (popularity)
+        const sortedCourses = publishedCourses.sort((a, b) => b.students - a.students);
+        
+        // Take top 10 courses
+        const topCourses = sortedCourses.slice(0, 10);
+        
+        setFeaturedCourses(topCourses);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        setFeaturedCourses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourses();
+
+    // Add event listener for storage changes
+    window.addEventListener('storage', fetchCourses);
+    
+    // Cleanup event listener on unmount
+    return () => {
+      window.removeEventListener('storage', fetchCourses);
+    };
+  }, []);
 
   const testimonials = [
     {
@@ -467,7 +409,8 @@ const Index = () => {
         </div>
       </section>
 
-
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

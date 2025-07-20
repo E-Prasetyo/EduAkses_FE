@@ -3,13 +3,28 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { useAuth } from "../contexts/AuthContext";
+
+const TINYMCE_API_KEY = import.meta.env.VITE_TINYMCE_API_KEY;
 import CreateQuiz from "./CreateQuiz";
 import { courseAPI } from "../services/api";
-import { localStorageService } from "../services/localStorage";
+import { localStorageService } from "../services/localStorageService";
+import ModuleQuizzes from "../components/ModuleQuizzes";
+
+// Helper function to extract YouTube video ID from URL
+const extractYouTubeVideoId = (url) => {
+  if (!url) return null;
+
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+
+  return match && match[2].length === 11 ? match[2] : null;
+};
 
 const EditCourse = () => {
   const params = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Tambahkan useAuth hook
   const [courseId] = useState(params.id || params['*']);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,6 +39,21 @@ const EditCourse = () => {
     }
   }, []);
 
+  // Validasi user login
+  useEffect(() => {
+    if (!user) {
+      setError('Anda harus login terlebih dahulu.');
+      setLoading(false);
+      return;
+    }
+    
+    if (user.role !== 'teacher') {
+      setError('Anda tidak memiliki akses ke halaman ini.');
+      setLoading(false);
+      return;
+    }
+  }, [user]);
+
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
@@ -37,14 +67,7 @@ const EditCourse = () => {
     modules: []
   });
 
-  const [modules, setModules] = useState([
-    {
-      id: 1,
-      title: "Pengenalan JavaScript",
-      lessons: [],
-      quizzes: []
-    }
-  ]);
+  const [modules, setModules] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [selectedModule, setSelectedModule] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -91,48 +114,77 @@ const EditCourse = () => {
     }
   };
 
-  const categories = [
+  // Fungsi hapus quiz dari modul
+  const handleDeleteQuiz = (moduleId, quizId) => {
+    const updatedModules = modules.map(module => {
+      if (module.id === moduleId) {
+        return {
+          ...module,
+          quizzes: (module.quizzes || []).filter(q => q.id !== quizId)
+        };
+      }
+      return module;
+    });
+    setModules(updatedModules);
+    const updatedCourseData = { ...courseData, modules: updatedModules };
+    localStorageService.saveDraft(courseId, updatedCourseData);
+    localStorageService.saveCourses(
+      localStorageService.getCourses().map(c => c.id === courseId ? updatedCourseData : c)
+    );
+  };
+
+  const [categories, setCategories] = useState([
     "Teknologi",
     "Seni & Desain",
     "Bisnis",
     "Literasi & Kewirausahaan",
     "Pengembangan Diri",
-  ];
+  ]);
+
+  useEffect(() => {
+    const storedCategories = localStorageService.getCategories();
+    if (storedCategories && storedCategories.length > 0) {
+      setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const savedData = localStorageService.getCourseData(courseId);
-        if (savedData) {
-          setCourseData(savedData);
+        // Cek apakah ada draft yang tersimpan
+        const savedDraft = localStorageService.getDraft(courseId);
+        if (savedDraft) {
+          setCourseData(savedDraft);
+          setModules(savedDraft.modules || []);
           setIsDataLoaded(true);
           setLoading(false);
           return;
         }
-
-        const response = await courseAPI.getCourse(courseId);
-        if (response) {
-          setCourseData(response);
-          localStorageService.saveCourseData(courseId, response);
+        // Ambil data course dari localStorage utama
+        const foundCourse = localStorageService.getCourseById(courseId);
+        if (foundCourse) {
+          setCourseData(foundCourse);
+          setModules(foundCourse.modules || []);
           setIsDataLoaded(true);
-        } else {
-          throw new Error('Gagal memuat data kursus');
+          setLoading(false);
+          return;
         }
+        // Jika tidak ditemukan, tampilkan error
+        setError('Data kursus tidak ditemukan!');
+        setLoading(false);
       } catch (err) {
-        console.error('Error fetching course:', err);
-        setError(err.message);
-      } finally {
+        setError('Gagal memuat data kursus');
         setLoading(false);
       }
     };
-
     if (courseId) {
       fetchCourseData();
     }
   }, [courseId]);
+
+
 
   if (error) {
     return (
@@ -164,31 +216,83 @@ const EditCourse = () => {
   }
 
   const handleInputChange = (e) => {
-    setCourseData({
+    const newData = {
       ...courseData,
       [e.target.name]: e.target.value,
-    });
+    };
+    setCourseData(newData);
+    
+    // Auto save draft
+    if (courseId) {
+      const draftData = {
+        ...newData,
+        modules: modules,
+        updatedAt: new Date().toISOString()
+      };
+      localStorageService.saveDraft(courseId, draftData);
+    }
   };
 
   const handleDescriptionChange = (content) => {
     try {
-      setCourseData(prev => ({
-        ...prev,
+      const newData = {
+        ...courseData,
         description: content
-      }));
+      };
+      setCourseData(newData);
+      
+      // Auto save draft
+      if (courseId) {
+        const draftData = {
+          ...newData,
+          modules: modules,
+          updatedAt: new Date().toISOString()
+        };
+        localStorageService.saveDraft(courseId, draftData);
+      }
     } catch (err) {
       console.error('Error updating editor content:', err);
       setError('Failed to update content. Please try again.');
     }
   };
 
-  const handleImageUpload = (e) => {
+  // Tambahkan fungsi konversi file ke base64
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setCourseData({
-        ...courseData,
-        coverImage: file,
-      });
+      try {
+        // Validasi ukuran file (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Ukuran file terlalu besar. Maksimal 2MB.');
+          return;
+        }
+
+        // Validasi tipe file
+        if (!file.type.startsWith('image/')) {
+          alert('File harus berupa gambar.');
+          return;
+        }
+
+        const base64 = await toBase64(file);
+        setCourseData({
+          ...courseData,
+          coverImage: base64,
+          thumbnail: base64,
+          image: base64, // Tambahkan field image
+        });
+        
+        console.log('Image uploaded successfully:', { fileName: file.name, size: file.size });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Gagal mengupload gambar. Silakan coba lagi.');
+      }
     }
   };
 
@@ -244,9 +348,16 @@ const EditCourse = () => {
   const updateLesson = (moduleIndex, lessonIndex, field, value) => {
     const updatedModules = modules.map((module, mIndex) => {
       if (mIndex === moduleIndex) {
-        const updatedLessons = module.lessons.map((lesson, lIndex) =>
-          lIndex === lessonIndex ? { ...lesson, [field]: value } : lesson
-        );
+        const updatedLessons = module.lessons.map((lesson, lIndex) => {
+          if (lIndex === lessonIndex) {
+            // Jika field adalah videoUrl, extract YouTube ID
+            if (field === "videoUrl" && value) {
+              value = extractYouTubeVideoId(value);
+            }
+            return { ...lesson, [field]: value };
+          }
+          return lesson;
+        });
         return { ...module, lessons: updatedLessons };
       }
       return module;
@@ -260,36 +371,14 @@ const EditCourse = () => {
       setLoading(true);
       setError(null);
       
+      // Validasi user
+      if (!user) {
+        throw new Error('User tidak ditemukan. Silakan login ulang.');
+      }
+      
       if (!courseId) {
         throw new Error('Course ID is required');
       }
-      
-      // Prepare the complete course data
-      const completeData = {
-        ...courseData,
-        modules: modules,
-        quizzes: quizzes
-      };
-
-      // Save to localStorage first
-      localStorageService.saveDraft(courseId, completeData);
-
-      // Try to save to backend
-      const response = await courseAPI.updateCourse(courseId, completeData);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      // If successful, clear draft and save as current version
-      localStorageService.clearDraft(courseId);
-      localStorageService.saveCourseData(courseId, response);
-      
-      // Show success message
-      alert('Kursus berhasil disimpan!');
-      
-      // Navigate to course view or list
-      navigate(`/courses/${id}`);
 
       // Validasi data
       if (!courseData.title?.trim()) {
@@ -301,30 +390,49 @@ const EditCourse = () => {
       if (!courseData.category) {
         throw new Error('Kategori harus dipilih');
       }
-
-      // Siapkan data untuk dikirim
-      const formData = new FormData();
-      Object.keys(courseData).forEach(key => {
-        if (key === 'coverImage' && courseData[key] instanceof File) {
-          formData.append(key, courseData[key]);
-        } else {
-          formData.append(key, courseData[key].toString());
-        }
-      });
       
-      // Tambahkan data modules
-      formData.append('modules', JSON.stringify(modules));
+      // Prepare the complete course data
+      const completeData = {
+        ...courseData,
+        id: courseId,
+        teacherId: user.id,
+        instructor: user.name,
+        modules: modules,
+        quizzes: quizzes,
+        updatedAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        submittedDate: courseData.submittedDate || new Date().toISOString(),
+        status: courseData.status || 'PENDING_REVIEW',
+        students: courseData.students || 0,
+        rating: courseData.rating || 0,
+        reviews: courseData.reviews || [],
+        thumbnail: courseData.coverImage || courseData.thumbnail || '',
+        image: courseData.coverImage || courseData.thumbnail || courseData.image || '', // Tambahkan field image
+        overview: courseData.description?.substring(0, 200) + '...' || courseData.overview || '', // Tambahkan overview
+        whatYouLearn: courseData.whatYouLearn || [] // Tambahkan field whatYouLearn
+      };
 
-      // Untuk development, simulasikan pengiriman data
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Saving course data:', { courseId, teacherId: user.id, instructor: user.name });
+
+      // Update course in localStorage (replace if exists)
+      const allCourses = localStorageService.getCourses() || [];
+      const updatedCourses = allCourses.some(c => c.id === courseId)
+        ? allCourses.map(c => c.id === courseId ? completeData : c)
+        : [...allCourses, completeData];
       
-      // Redirect ke dashboard dengan pesan sukses
-      navigate('/pengajar/dashboard', { 
-        state: { 
-          message: 'Kursus berhasil diperbarui!',
-          type: 'success'
-        }
-      });
+      localStorageService.saveCourses(updatedCourses);
+      
+      // Clear draft
+      localStorageService.clearDraft(courseId);
+
+      console.log('Course saved successfully to localStorage');
+
+      // Show success message
+      alert('Kursus berhasil disimpan!');
+      
+      // Redirect ke halaman detail course
+      navigate(`/kursus/${courseId}`);
+
     } catch (err) {
       console.error('Error updating course:', err);
       setError(err.message || 'Gagal menyimpan perubahan');
@@ -369,7 +477,7 @@ const EditCourse = () => {
                       <input
                         type="text"
                         name="title"
-                        value={courseData.title}
+                        value={courseData.title || ''}
                         onChange={handleInputChange}
                         required
                         className="form-control h-12"
@@ -380,7 +488,7 @@ const EditCourse = () => {
                       <label className="form-label fw-medium">Kategori *</label>
                       <select
                         name="category"
-                        value={courseData.category}
+                        value={courseData.category || ''}
                         onChange={handleInputChange}
                         required
                         className="form-select h-12"
@@ -397,7 +505,7 @@ const EditCourse = () => {
                       <label className="form-label fw-medium">Level</label>
                       <select
                         name="level"
-                        value={courseData.level}
+                        value={courseData.level || ''}
                         onChange={handleInputChange}
                         className="form-select h-12"
                       >
@@ -411,7 +519,7 @@ const EditCourse = () => {
                       <input
                         type="text"
                         name="duration"
-                        value={courseData.duration}
+                        value={courseData.duration || ''}
                         onChange={handleInputChange}
                         className="form-control h-12"
                         placeholder="Contoh: 8 Jam"
@@ -421,7 +529,7 @@ const EditCourse = () => {
                       <label className="form-label fw-medium">Tipe Kursus</label>
                       <select
                         name="price"
-                        value={courseData.price}
+                        value={courseData.price || ''}
                         onChange={handleInputChange}
                         className="form-select h-12"
                       >
@@ -433,22 +541,16 @@ const EditCourse = () => {
                       <label className="form-label fw-medium">Deskripsi Kursus *</label>
                       {isDataLoaded ? (
                         <Editor
-                          tinymceScriptSrc="/tinymce/tinymce.min.js"
+                          apiKey={TINYMCE_API_KEY}
                           value={courseData.description}
                           onEditorChange={handleDescriptionChange}
                           init={{
                             height: 300,
                             menubar: false,
                             readonly: false,
-                            plugins: [
-                              "advlist autolink lists link image charmap print preview anchor",
-                              "searchreplace visualblocks code fullscreen",
-                              "insertdatetime media table paste code help wordcount",
-                            ],
+                            plugins: 'advlist autolink lists link image charmap code help wordcount',
                             toolbar:
-                              "undo redo | formatselect | bold italic backcolor | \
-                              alignleft aligncenter alignright alignjustify | \
-                              bullist numlist outdent indent | removeformat | help",
+                              'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | code | help',
                             setup: (editor) => {
                               editor.on('init', () => {
                                 if (editor.mode.get() === 'readonly') {
@@ -469,6 +571,76 @@ const EditCourse = () => {
                           </div>
                         </div>
                       )}
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label fw-medium">Gambar Sampul</label>
+                      <div className="border border-2 border-dashed border-secondary rounded p-4 text-center">
+                        {courseData.coverImage || courseData.thumbnail || courseData.image ? (
+                          <div>
+                            <img
+                              src={courseData.coverImage || courseData.thumbnail || courseData.image || ''}
+                              alt="Preview"
+                              className="img-fluid rounded mb-3"
+                              style={{ height: "200px", objectFit: "cover" }}
+                              onError={(e) => {
+                                console.error('Error loading image:', e);
+                                e.target.style.display = 'none';
+                                alert('Gagal memuat gambar. Silakan upload ulang.');
+                              }}
+                            />
+                            <div className="d-flex gap-2 justify-content-center">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCourseData({ ...courseData, coverImage: null, thumbnail: null, image: null })
+                                }
+                                className="btn btn-danger btn-sm"
+                              >
+                                Hapus Gambar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => document.getElementById('coverImage').click()}
+                                className="btn btn-outline-primary btn-sm"
+                              >
+                                Ganti Gambar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <svg
+                              width="48"
+                              height="48"
+                              viewBox="0 0 48 48"
+                              fill="none"
+                              className="text-muted mb-3"
+                            >
+                              <path
+                                d="M24 4V44M4 24H44"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                            <p className="text-muted mb-3">
+                              Drag & drop gambar atau klik untuk upload
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="d-none"
+                              id="coverImage"
+                            />
+                            <label
+                              htmlFor="coverImage"
+                              className="btn btn-primary"
+                            >
+                              Pilih Gambar
+                            </label>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -604,7 +776,7 @@ const EditCourse = () => {
                                 <div className="mb-3">
                                   <label className="form-label">URL Video</label>
                                   <input
-                                    type="url"
+                                    type="text"
                                     value={lesson.videoUrl}
                                     onChange={(e) =>
                                       updateLesson(
@@ -615,8 +787,18 @@ const EditCourse = () => {
                                       )
                                     }
                                     className="form-control"
-                                    placeholder="Masukkan URL video YouTube"
+                                    placeholder="Masukkan URL atau ID video YouTube"
                                   />
+                                 {/* Preview embed jika ID valid */}
+                                 {lesson.videoUrl && extractYouTubeVideoId(lesson.videoUrl) && (
+                                   <div className="mt-2 ratio ratio-16x9">
+                                     <iframe
+                                       src={`https://www.youtube.com/embed/${extractYouTubeVideoId(lesson.videoUrl)}`}
+                                       title="YouTube video preview"
+                                       allowFullScreen
+                                     ></iframe>
+                                   </div>
+                                 )}
                                 </div>
                               )}
                               <div className="mb-3">
@@ -639,6 +821,15 @@ const EditCourse = () => {
                             </div>
                           ))}
                         </div>
+                        
+                        {/* Quiz Section */}
+                        <ModuleQuizzes 
+                          courseId={courseId}
+                          moduleId={module.id}
+                          quizzes={module.quizzes || []}
+                          moduleIndex={moduleIndex}
+                          onDeleteQuiz={handleDeleteQuiz}
+                        />
                       </div>
                     ))}
                   </div>
@@ -656,78 +847,90 @@ const EditCourse = () => {
             </div>
 
             {/* Sidebar */}
-            <div className="col-lg-4">
+            {/* HAPUS BAGIAN INI: Sidebar Gambar Sampul */}
+            {/* <div className="col-lg-4">
               <div className="card border-0 shadow-sm">
                 <div className="card-body">
                   <h5 className="card-title mb-4 font-exo fw-semibold">
                     Gambar Sampul
                   </h5>
-                  <div className="border border-2 border-dashed rounded p-4 text-center">
-                    {courseData.coverImage ? (
-                      <div>
-                        <img
-                          src={
-                            typeof courseData.coverImage === "string"
-                              ? courseData.coverImage
-                              : URL.createObjectURL(courseData.coverImage)
-                          }
-                          alt="Preview"
-                          className="img-fluid rounded mb-3"
-                          style={{ maxHeight: "200px", objectFit: "cover" }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCourseData({ ...courseData, coverImage: null })
-                          }
-                          className="btn btn-danger btn-sm"
-                        >
-                          Hapus Gambar
-                        </button>
+                  <div className="border border-0 shadow-sm">
+                    <div className="card-body">
+                      <h5 className="card-title mb-4 font-exo fw-semibold">
+                        Gambar Sampul
+                      </h5>
+                      <div className="border border-2 border-dashed border-secondary rounded p-4 text-center">
+                        {courseData.coverImage ? (
+                          <div>
+                            <img
+                              src={courseData.coverImage}
+                              alt="Preview"
+                              className="img-fluid rounded mb-3"
+                              style={{ height: "200px", objectFit: "cover" }}
+                              onError={(e) => {
+                                console.error('Error loading image:', e);
+                                e.target.style.display = 'none';
+                                alert('Gagal memuat gambar. Silakan upload ulang.');
+                              }}
+                            />
+                            <div className="d-flex gap-2 justify-content-center">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCourseData({ ...courseData, coverImage: null, thumbnail: null, image: null })
+                                }
+                                className="btn btn-danger btn-sm"
+                              >
+                                Hapus Gambar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => document.getElementById('coverImage').click()}
+                                className="btn btn-outline-primary btn-sm"
+                              >
+                                Ganti Gambar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <svg
+                              width="48"
+                              height="48"
+                              viewBox="0 0 48 48"
+                              fill="none"
+                              className="text-muted mb-3"
+                            >
+                              <path
+                                d="M24 4V44M4 24H44"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                            <p className="text-muted mb-3">
+                              Drag & drop gambar atau klik untuk upload
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="d-none"
+                              id="coverImage"
+                            />
+                            <label
+                              htmlFor="coverImage"
+                              className="btn btn-primary"
+                            >
+                              Pilih Gambar
+                            </label>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div>
-                        <svg
-                          width="48"
-                          height="48"
-                          viewBox="0 0 48 48"
-                          fill="none"
-                          className="text-muted mb-3"
-                        >
-                          <path
-                            d="M24 4C12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20c0-1.341-.147-2.647-.412-3.912"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <div className="mb-3">
-                          <label className="d-block text-muted">
-                            Upload gambar sampul kursus
-                          </label>
-                          <small className="text-muted">
-                            Format: JPG, PNG. Ukuran maks: 2MB
-                          </small>
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="d-none"
-                          id="coverImage"
-                        />
-                        <label
-                          htmlFor="coverImage"
-                          className="btn btn-outline-primary btn-sm"
-                        >
-                          Pilih File
-                        </label>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         {showQuizModal && (

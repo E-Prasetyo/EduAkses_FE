@@ -3,7 +3,7 @@
 :root {
   /* EduAkses Brand Colors - RED THEME */
   --edu-primary: #dc3545;
-  --edu-green: #dc3545;
+  --edu-green: #28a745;
   --edu-red: #dc3545;
   --edu-light-grey: #e5e5e5;
   --edu-dark-gray: #666666;
@@ -46,8 +46,8 @@
 }
 
 .btn-edu-green:hover {
-  background-color: #4a9e1f;
-  border-color: #4a9e1f;
+  background-color: #218838;
+  border-color: #1e7e34;
   color: white;
 }
 

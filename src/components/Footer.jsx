@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -17,12 +18,12 @@ const Footer = () => {
             <h5 className="mb-3">Programs</h5>
             <ul className="list-unstyled">
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/kursus"
                   className="text-light text-decoration-none"
                 >
                   Semua Kursus
-                </a>
+                </Link>
               </li>
               <li>
                 <a
@@ -99,7 +100,7 @@ const Footer = () => {
         <div className="row align-items-center">
           <div className="col-md-6 text-center text-md-start">
             <p className="mb-0">
-              &copy; 2024 EduAkses. All rights reserved.
+              &copy; 2025 EduAkses. All rights reserved.
             </p>
           </div>
           <div className="col-md-6 text-center text-md-end mt-3 mt-md-0">
