@@ -1,173 +1,228 @@
-# EduAkses - Platform Pembelajaran Online
+# EduAkses_FE
 
-Platform pembelajaran online yang mendukung pengajar, siswa, dan admin untuk mengelola kursus secara efektif.
+## Daftar Isi
+1. Pendahuluan
+2. Struktur Proyek
+3. Fitur Utama
+4. Instalasi & Konfigurasi
+5. Alur Autentikasi & Otorisasi
+6. Penjelasan Service & Integrasi Backend
+7. Daftar Endpoint API (Lengkap dengan Penjelasan & Contoh)
+8. Penanganan Error & Fallback
+9. Troubleshooting
+10. Catatan Pengembangan
 
-## Fitur Utama
+---
 
-### 🎓 Pengajar (Teacher)
-- **Dashboard Pengajar**: Kelola kursus, pantau progress siswa, dan lihat statistik
-- **Buat Kursus**: Buat kursus dengan modul, pelajaran, dan quiz
-- **Edit Kursus**: Edit kursus yang sudah dibuat
-- **Upload Video**: Upload video YouTube untuk pelajaran
-- **Sistem Notifikasi**: Terima notifikasi tentang status kursus
+## 1. Pendahuluan
 
-### 👨‍🎓 Siswa (Student)
-- **Dashboard Siswa**: Lihat kursus yang diikuti dan progress belajar
-- **Enroll Kursus**: Daftar ke kursus yang tersedia
-- **Belajar Online**: Akses materi pelajaran dan video
-- **Quiz**: Ikuti quiz untuk menguji pemahaman
-- **Progress Tracking**: Pantau progress belajar
+**EduAkses_FE** adalah aplikasi frontend untuk platform pembelajaran online berbasis React. Aplikasi ini menyediakan fitur manajemen kursus, forum diskusi, kuis, serta sistem autentikasi dan otorisasi berbasis peran (admin, pengajar, pelajar). Komunikasi data dilakukan melalui REST API ke backend, dengan fallback ke localStorage jika backend tidak tersedia.
 
-### 👨‍💼 Admin
-- **Dashboard Admin**: Kelola semua pengajar, siswa, dan kursus
-- **Review Kursus**: Setujui atau tolak kursus yang diajukan
-- **Kelola Pengajar**: Setujui atau tolak pendaftaran pengajar
-- **Hapus Pengajar**: Hapus pengajar beserta semua kursus dan data terkait
-- **Analytics**: Lihat statistik platform
+---
 
-## Sistem Pendaftaran Pengajar
+## 2. Struktur Proyek
 
-### Cara Pendaftaran
-1. **Daftar sebagai Pengajar** di halaman register
-2. **Pilih role "Teacher"** saat pendaftaran
-3. **Tunggu persetujuan admin** (status: pending)
-4. **Setelah disetujui** (status: active), bisa membuat kursus
-
-### ID Pengajar
-- Setiap pengajar mendapat ID unik: `teacher{timestamp}`
-- Contoh: `teacher1703123456789`
-- ID ini digunakan untuk mengidentifikasi course milik pengajar
-
-### Filter Course di Dashboard
-- Course ditampilkan berdasarkan `teacherId === user.id`
-- Atau berdasarkan `instructor === user.name`
-- Admin bisa melihat semua course yang sudah dipublish
-
-## Cara Menggunakan
-
-### Login Default
 ```
-Admin:
-- Email: admin@eduakses.com
-- Password: admin123
-
-Teacher:
-- Email: ahmad@eduakses.com  
-- Password: ahmad123
-
-Student:
-- Email: budi@eduakses.com
-- Password: budi123
+├── public/
+│   └── tinymce/         # Editor teks
+├── scripts/             # Script utilitas
+├── src/
+│   ├── assets/          # Gambar, ikon, dsb
+│   ├── components/      # Komponen UI
+│   ├── contexts/        # React Context
+│   ├── hooks/           # Custom hooks
+│   ├── lib/             # Utilitas JS
+│   ├── pages/           # Halaman utama
+│   ├── services/        # Integrasi API & localStorage
+│   └── styles/          # CSS
+├── .env                 # Variabel lingkungan
+├── vite.config.js       # Konfigurasi Vite
+├── package.json         # Dependensi & script
 ```
 
-### Membuat Kursus
-1. Login sebagai pengajar
-2. Klik "Buat Kursus Baru"
-3. Isi informasi dasar kursus
-4. Tambahkan modul dan pelajaran
-5. Upload video YouTube atau tambahkan konten teks
-6. Submit untuk review admin
+---
 
-### Menjalankan Aplikasi
+## 3. Fitur Utama
+
+- **Manajemen Pengguna:** Login, register, profil, peran (admin, pengajar, pelajar)
+- **Manajemen Kursus:** CRUD kursus, pendaftaran, pelacakan kemajuan
+- **Forum Diskusi:** Topik, balasan, like, pencarian, trending
+- **Kuis & Penilaian:** Pembuatan, pengambilan, penilaian otomatis
+---
+
+## 4. Instalasi & Konfigurasi
+
+### a. Instalasi
 ```bash
 npm install
-npm run dev
 ```
 
-## Teknologi
-- React 18
-- React Router
-- Bootstrap 5
-- TinyMCE Editor
-- LocalStorage untuk data persistence
+### b. Menjalankan Aplikasi
+```bash
+npm run dev
+```
+Akses di: [http://localhost:5173](http://localhost:5173)
 
-## Struktur Data
+### c. Variabel Lingkungan (`.env`)
+```
+VITE_API_URL=http://localhost:5173/api
+VITE_TINYMCE_API_KEY=... (dapatkan dari tinymce.com)
+```
 
-### Course Structure
-```javascript
-{
-  id: "unique_id",
-  title: "Judul Kursus",
-  description: "Deskripsi kursus",
-  teacherId: "teacher_id", // ID pengajar
-  instructor: "Nama Pengajar",
-  status: "PENDING_REVIEW|PUBLISHED|REJECTED",
-  modules: [
-    {
-      id: 1,
-      title: "Judul Modul",
-      lessons: [
-        {
-          id: 1,
-          title: "Judul Pelajaran",
-          type: "text|video",
-          textContent: "Konten HTML",
-          videoUrl: "YouTube Video ID",
-          duration: "10:30"
-        }
-      ]
-    }
-  ]
+### d. Proxy Backend (di `vite.config.js`)
+```js
+proxy: {
+  '/api': {
+    target: 'http://localhost:8000',
+    changeOrigin: true,
+    rewrite: (path) => path.replace(/^\/api/, '')
+  }
 }
 ```
 
-## Perbaikan Terbaru
+---
 
-### ✅ Sistem Pengajar Universal
-- Semua pengajar yang mendaftar bisa membuat dan mengelola kursus
-- ID pengajar unik dan konsisten
-- Filter course berdasarkan user yang login
-- Migration script untuk memperbaiki data lama
+## 5. Alur Autentikasi & Otorisasi
 
-### ✅ Video YouTube
-- Support berbagai format URL YouTube
-- Auto-extract video ID
-- Fallback jika video tidak tersedia
+- **Login:** User mengisi form login, request dikirim ke `/auth/login`, jika sukses token JWT disimpan di localStorage/sessionStorage.
+- **Register:** User mengisi form register, request ke `/auth/register`, data user dan token diterima.
+- **Token:** Setiap request ke endpoint API yang butuh otorisasi akan otomatis menyisipkan token di header `Authorization`.
+- **Logout:** Menghapus token dari storage dan redirect ke login.
+- **Fallback:** Jika backend tidak tersedia, login/register tetap bisa dilakukan secara lokal (mode offline/development).
 
-### ✅ Sinkronisasi Real-time
-- Dashboard teacher update otomatis saat ada perubahan
-- Event listener untuk perubahan localStorage
+**Kredensial Default:**
+- Admin:  
+  - Email: `admin@eduakses.com`  
+  - Password: `admin123`
+- Pengajar:  
+  - Email: `ahmad@eduakses.com`  
+  - Password: `ahmad123`
 
-## Troubleshooting
+---
 
-### Course Tidak Muncul di Dashboard Teacher
-1. Pastikan login sebagai pengajar yang benar
-2. Periksa console browser untuk debugging
-3. Pastikan course memiliki `teacherId` yang sesuai
-4. Refresh halaman atau logout/login ulang
+## 6. Penjelasan Service & Integrasi Backend
 
-### Video YouTube Tidak Muncul
-1. Pastikan URL YouTube valid
-2. Periksa console untuk error
-3. Pastikan video tidak private atau di-restrict
-4. Gunakan format URL: `https://www.youtube.com/watch?v=VIDEO_ID`
+### a. **Konfigurasi Axios** (`src/services/axiosConfig.js`)
+- Membuat instance Axios dengan baseURL, timeout, dan headers.
+- Interceptor request: Menyisipkan token ke header Authorization.
+- Interceptor response: Menangani error (401, 404, 500, network) dan fallback ke localStorage.
 
-### Fitur Hapus Pengajar
-1. **Akses**: Login sebagai admin dan buka tab "Kelola Pengajar"
-2. **Konfirmasi**: Sistem akan menampilkan detail lengkap pengajar dan data yang akan dihapus
-3. **Warning**: Sistem akan memberikan peringatan jika pengajar memiliki banyak kursus/siswa
-4. **Data yang dihapus**: Akun pengajar, semua kursus, enrollment siswa, dan progress belajar
-5. **Notifikasi**: Admin akan menerima notifikasi tentang penghapusan yang dilakukan
+### b. **Service API**
+- **authAPI.js:** Login, register, get current user, logout, update profile.
+- **userAPI.js:** CRUD user, approve/reject pengajar, get semua pelajar/pengajar.
+- **api.js:** CRUD kursus, CRUD kuis pada modul kursus.
+- **enrollmentAPI.js:** Enroll kursus, get/update progress, complete course.
+- **forumAPI.js:** CRUD topik forum, balasan, like/unlike, kategori, pencarian, trending.
+- **localStorageService.js:** Fallback data lokal jika backend tidak tersedia.
 
-### Fitur Kelola Status Pengajar
-1. **Akses**: Login sebagai admin dan buka tab "Kelola Pengajar"
-2. **Aktifkan**: Klik tombol hijau (✓) untuk mengaktifkan pengajar yang pending
-3. **Nonaktifkan**: Klik tombol kuning (🚫) untuk menonaktifkan pengajar yang aktif
-4. **Efek Status**: 
-   - **Aktif**: Pengajar bisa membuat dan mengelola kursus
-   - **Pending**: Pengajar tidak bisa membuat kursus
-5. **Notifikasi**: Pengajar akan menerima notifikasi tentang perubahan status
+### c. **Contoh Integrasi**
+```js
+// Contoh: Mengambil semua kursus
+dispatch(async () => {
+  const data = await courseAPI.getAllCourses();
+  setCourses(data);
+});
+```
 
-### Fitur Kelola Pelajar
-1. **Akses**: Login sebagai admin dan buka tab "Kelola Pelajar"
-2. **Lihat Data**: Tabel menampilkan semua pelajar dengan informasi lengkap
-3. **Statistik**: 
-   - Total pelajar terdaftar
-   - Total enrollment kursus
-   - Total progress belajar
-4. **Hapus Pelajar**: Klik tombol merah (🗑️) untuk menghapus pelajar
-5. **Data yang dihapus**: Akun pelajar, semua enrollment, dan progress belajar
-6. **Konfirmasi**: Sistem akan menampilkan detail lengkap sebelum penghapusan
+---
 
-## Kontribusi
-Silakan buat issue atau pull request untuk perbaikan dan fitur baru.
+## 7. Daftar Endpoint API (Lengkap dengan Penjelasan & Contoh)
+
+### a. **Autentikasi**
+| Method | Endpoint              | Deskripsi                | Contoh Payload/Response |
+|--------|----------------------|--------------------------|------------------------|
+| POST   | `/auth/login`        | Login user               | `{ email, password }` → `{ user, token }` |
+| POST   | `/auth/register`     | Register user            | `{ name, email, password, role }` → `{ user, token }` |
+| GET    | `/auth/me`           | Get current user         | (header: Bearer token) → `{ user }` |
+| POST   | `/auth/logout`       | Logout user              | (header: Bearer token) → `{ success: true }` |
+| PUT    | `/auth/profile`      | Update profile user      | `{ name, ... }` → `{ user }` |
+
+### b. **Manajemen User**
+| Method | Endpoint                              | Deskripsi                    | Contoh |
+|--------|---------------------------------------|------------------------------|--------|
+| GET    | `/users`                              | Get semua user (admin)       | `[ { user }, ... ]` |
+| GET    | `/users/{userId}`                     | Get user by ID               | `{ user }` |
+| PUT    | `/users/{userId}`                     | Update user (admin)          | `{ ... }` |
+| DELETE | `/users/{userId}`                     | Delete user (admin)          | `{ success: true }` |
+| GET    | `/users/teachers`                     | Get semua pengajar           | `[ { user }, ... ]` |
+| GET    | `/users/students`                     | Get semua pelajar            | `[ { user }, ... ]` |
+| PUT    | `/users/teachers/{teacherId}/approve` | Approve pengajar (admin)     | `{ success: true }` |
+| PUT    | `/users/teachers/{teacherId}/reject`  | Reject pengajar (admin)      | `{ success: true }` |
+
+### c. **Kursus & Kuis**
+| Method | Endpoint                                              | Deskripsi                        | Contoh |
+|--------|-------------------------------------------------------|----------------------------------|--------|
+| GET    | `/courses`                                            | Get semua kursus                 | `[ { course }, ... ]` |
+| GET    | `/courses/{courseId}`                                 | Get kursus by ID                 | `{ course }` |
+| POST   | `/courses`                                            | Create kursus                    | `{ title, ... }` |
+| PUT    | `/courses/{courseId}`                                 | Update kursus                    | `{ ... }` |
+| DELETE | `/courses/{courseId}`                                 | Delete kursus                    | `{ success: true }` |
+| POST   | `/courses/{courseId}/modules/{moduleId}/quizzes`      | Tambah kuis ke modul             | `{ ... }` |
+| PUT    | `/courses/{courseId}/modules/{moduleId}/quizzes/{id}` | Update kuis                      | `{ ... }` |
+| DELETE | `/courses/{courseId}/modules/{moduleId}/quizzes/{id}` | Delete kuis                      | `{ success: true }` |
+
+### d. **Enrollment & Progress**
+| Method | Endpoint                                         | Deskripsi                    | Contoh |
+|--------|--------------------------------------------------|------------------------------|--------|
+| POST   | `/enrollments/courses/{courseId}`                | Enroll ke kursus             | `{ success: true }` |
+| GET    | `/enrollments`                                   | Get semua enrollment user    | `[ { enrollment }, ... ]` |
+| GET    | `/enrollments/courses/{courseId}/progress`       | Get progress kursus          | `{ progress }` |
+| PUT    | `/enrollments/courses/{courseId}/progress`       | Update progress kursus       | `{ progress }` |
+| PUT    | `/enrollments/courses/{courseId}/complete`       | Tandai kursus selesai        | `{ success: true }` |
+
+### e. **Forum Diskusi**
+| Method | Endpoint                                 | Deskripsi                        | Contoh |
+|--------|------------------------------------------|----------------------------------|--------|
+| GET    | `/forum`                                | Get semua topik forum            | `[ { forum }, ... ]` |
+| GET    | `/forum/{id}`                           | Get detail topik forum           | `{ forum }` |
+| POST   | `/forum`                                | Buat topik forum baru            | `{ title, ... }` |
+| PUT    | `/forum/{id}`                           | Update topik forum               | `{ ... }` |
+| DELETE | `/forum/{id}`                           | Hapus topik forum                | `{ success: true }` |
+| POST   | `/forum/{forumId}/replies`              | Tambah balasan ke topik          | `{ content }` |
+| PUT    | `/forum/{forumId}/replies/{replyId}`    | Update balasan                   | `{ content }` |
+| DELETE | `/forum/{forumId}/replies/{replyId}`    | Hapus balasan                    | `{ success: true }` |
+| POST   | `/forum/{forumId}/like`                 | Like topik forum                 | `{ success: true }` |
+| DELETE | `/forum/{forumId}/like`                 | Unlike topik forum               | `{ success: true }` |
+| GET    | `/forum/categories`                     | Get kategori forum               | `[ { category }, ... ]` |
+| GET    | `/forum/search`                         | Cari topik forum                 | `[ { forum }, ... ]` |
+| GET    | `/forum/trending`                       | Get trending topik forum         | `[ { forum }, ... ]` |
+
+---
+
+## 8. Penanganan Error & Fallback
+
+- **Error 401:** Token expired, user otomatis logout
+- **Error 404/500/Network:** Aplikasi fallback ke localStorage (mode offline)
+- **Semua error** dicatat di console browser
+- **Fallback:** Data tetap bisa diakses/ditulis secara lokal jika backend tidak tersedia (khusus development)
+
+---
+
+## 9. Troubleshooting
+
+- **Tidak bisa konek backend:**  
+  - Pastikan backend berjalan di port 8000
+  - Cek proxy di `vite.config.js`
+- **Error 500/404:**  
+  - Cek endpoint backend & log server
+- **Autentikasi gagal:**  
+  - Hapus token di localStorage/sessionStorage, login ulang
+- **Mode Offline:**  
+  - Jika backend mati, aplikasi tetap bisa login/register dan akses data dummy (localStorage)
+
+---
+
+## 10. Catatan Pengembangan
+
+- **Base URL** bisa diubah sesuai environment (dev/staging/production)
+- **Fallback localStorage** hanya untuk development/offline mode
+- **Error Handling** sudah terpusat di masing-masing service
+- **Penambahan Endpoint:**
+  - Tambahkan fungsi baru di file service terkait di `src/services/`
+  - Gunakan `axiosInstance` untuk request ke backend
+  - Pastikan endpoint backend sudah tersedia dan sesuai
+
+---
+
+
+**Dokumentasi ini sudah mencakup seluruh fitur, struktur, serta endpoint API yang digunakan pada aplikasi EduAkses_FE. Jika ada pertanyaan atau butuh penjelasan lebih detail, silakan hubungi tim pengembang.**

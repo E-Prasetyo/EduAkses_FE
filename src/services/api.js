@@ -1,14 +1,13 @@
-// Use the current origin for development
-const API_BASE_URL = window.location.origin;
+import axiosInstance from './axiosConfig';
 
-// Helper function to get headers
-const getHeaders = () => {
-  const token = localStorage.getItem('token'); // Assuming you store JWT in localStorage
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': token ? `Bearer ${token}` : '',
-    'Accept': 'application/json',
-  };
+// Helper function to handle API responses
+const handleResponse = (response) => response.data;
+
+// Helper function to handle API errors
+const handleError = (error) => {
+  const errorMessage = error.response?.data?.message || error.message || 'API request failed';
+  console.error('API Error:', errorMessage);
+  throw new Error(errorMessage);
 };
 
 // Helper function to extract course ID from slug
@@ -21,16 +20,17 @@ const extractCourseId = (slug) => {
   return slug;
 };
 
-// Helper function to handle API responses
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || 'API request failed');
-  }
-  return response.json();
-};
-
 export const courseAPI = {
+  // Fetch all courses
+  getAllCourses: async () => {
+    try {
+      const response = await axiosInstance.get('/courses');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+  
   // Fetch course by ID or slug
   getCourse: async (courseId) => {
     if (!courseId) {
@@ -39,48 +39,20 @@ export const courseAPI = {
     }
 
     try {
-      // For development, return mock data
-      return {
-        id: courseId,
-        title: "React Fundamental",
-        description: "Belajar dasar-dasar React",
-        category: "Teknologi",
-        coverImage: null,
-        level: "Pemula",
-        duration: "8 jam",
-        price: "free",
-        customPrice: "",
-        status: "DRAFT",
-        modules: [
-          {
-            id: 1,
-            title: "Pengenalan React",
-            description: "Memahami dasar React",
-            lessons: [],
-            quizzes: []
-          }
-        ]
-      };
-
-      // Uncomment below when backend is ready
-      /*
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/courses/${courseId}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-      */
+      const response = await axiosInstance.get(`/courses/${courseId}`);
+      return handleResponse(response);
     } catch (error) {
-      console.error('API Error:', error);
-      return null;
+      return handleError(error);
+    }
+  },
+
+  // Create new course
+  createCourse: async (courseData) => {
+    try {
+      const response = await axiosInstance.post('/courses', courseData);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
     }
   },
 
@@ -89,17 +61,22 @@ export const courseAPI = {
     try {
       if (!id) throw new Error('Course ID is required');
       
-      const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(courseData),
-      });
-      
-      return await handleResponse(response);
+      const response = await axiosInstance.put(`/courses/${id}`, courseData);
+      return handleResponse(response);
     } catch (error) {
-      console.error('Error updating course:', error);
-      return { error: error.message };
+      return handleError(error);
+    }
+  },
+
+  // Delete course
+  deleteCourse: async (id) => {
+    try {
+      if (!id) throw new Error('Course ID is required');
+      
+      const response = await axiosInstance.delete(`/courses/${id}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
     }
   },
 
@@ -108,49 +85,30 @@ export const courseAPI = {
     try {
       if (!courseId || !moduleId) throw new Error('Course ID and Module ID are required');
       
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}/modules/${moduleId}/quizzes`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'include',
-        body: JSON.stringify(quizData),
-      });
-      
-      return await handleResponse(response);
+      const response = await axiosInstance.post(`/courses/${courseId}/modules/${moduleId}/quizzes`, quizData);
+      return handleResponse(response);
     } catch (error) {
-      console.error('Error adding quiz:', error);
-      return { error: error.message };
+      return handleError(error);
     }
   },
 
   // Update quiz
   updateQuiz: async (courseId, moduleId, quizId, quizData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(quizData),
-      });
-      if (!response.ok) throw new Error('Failed to update quiz');
-      return await response.json();
+      const response = await axiosInstance.put(`/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`, quizData);
+      return handleResponse(response);
     } catch (error) {
-      console.error('Error updating quiz:', error);
-      throw error;
+      return handleError(error);
     }
   },
 
   // Delete quiz
   deleteQuiz: async (courseId, moduleId, quizId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to delete quiz');
-      return true;
+      const response = await axiosInstance.delete(`/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`);
+      return handleResponse(response);
     } catch (error) {
-      console.error('Error deleting quiz:', error);
-      throw error;
+      return handleError(error);
     }
   }
 };

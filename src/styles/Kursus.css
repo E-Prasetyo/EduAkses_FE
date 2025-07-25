@@ -1,0 +1,457 @@
+/* =========================================================
+   1. Fonts
+========================================================= */
+@import url("https://fonts.googleapis.com/css2?family=Exo:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600;700&display=swap");
+
+/* =========================================================
+   2. CSS Variables (Light + Dark)
+========================================================= */
+:root {
+  /* Brand - RED THEME */
+  --edu-primary: #dc3545;
+  --edu-primary-dark: #b02a37;
+  --edu-green: #28a745;
+  --edu-light-grey: #e5e5e5;
+  --edu-dark-gray: #666666;
+  --edu-white-grey: #f8f9fa;
+
+  /* Base colors */
+  --clr-bg: #ffffff;
+  --clr-surface: #ffffff;
+  --clr-text: #1f2937;
+  --clr-muted: #6b7280;
+
+  /* Effects */
+  --radius: 16px;
+  --radius-lg: 24px;
+  --transition: 0.25s ease;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* Bootstrap override */
+  --bs-primary: var(--edu-primary);
+  --bs-success: var(--edu-primary);
+  --bs-danger: var(--edu-primary);
+  --bs-light: var(--edu-white-grey);
+  --bs-dark: #333333;
+}
+
+/* Dark mode (aktifkan dengan class="dark" pada <body>) */
+.dark {
+  --clr-bg: #0f0f12;
+  --clr-surface: #1a1a1d;
+  --clr-text: #f8f9fa;
+  --clr-muted: #9ca3af;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+
+/* =========================================================
+   3. Fonts Utility
+========================================================= */
+.font-exo {
+  font-family: "Exo", sans-serif;
+}
+.font-jost {
+  font-family: "Jost", sans-serif;
+}
+
+/* =========================================================
+   4. Layout & Utilities
+========================================================= */
+body {
+  background: var(--clr-bg);
+  color: var(--clr-text);
+  scroll-behavior: smooth;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+.h-12 {
+  height: 3rem;
+}
+.h-10 {
+  height: 2.5rem;
+}
+
+.rounded-2xl {
+  border-radius: 1rem;
+}
+.rounded-3xl {
+  border-radius: 1.5rem;
+}
+
+.gap-8 {
+  gap: 2rem;
+}
+.gap-6 {
+  gap: 1.5rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-hidden {
+  display: none !important;
+}
+@media (min-width: 769px) {
+  .mobile-hidden {
+    display: initial !important;
+  }
+}
+
+/* =========================================================
+   5. Buttons & Links
+========================================================= */
+.btn-edu-primary {
+  background-color: var(--edu-primary);
+  border-color: white;
+  color: white;
+  transition: var(--transition);
+}
+.btn-edu-primary:hover,
+.btn-edu-primary:focus {
+  background-color: var(--edu-primary-dark);
+  border-color: var(--edu-primary-dark);
+  color: white;
+  box-shadow: var(--shadow-hover);
+}
+.btn-edu-green {
+  background-color: var(--edu-green);
+  border-color: var(--edu-green);
+  color: white;
+  transition: var(--transition);
+}
+.btn-edu-green:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+  color: white;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--edu-light-grey);
+  color: var(--clr-text);
+  transition: var(--transition);
+}
+.btn-ghost:hover {
+  border-color: var(--edu-primary);
+  color: var(--edu-primary);
+}
+
+/* Toggle view buttons */
+.btn-toggle {
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: var(--transition);
+}
+.btn-toggle svg {
+  pointer-events: none;
+}
+.btn-toggle.active {
+  background: var(--edu-primary);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+/* =========================================================
+   6. Backgrounds & Text Colors
+========================================================= */
+.bg-edu-primary {
+  background-color: var(--edu-primary) !important;
+}
+.bg-edu-green {
+  background-color: var(--edu-green) !important;
+}
+.bg-edu-red {
+  background-color: var(--edu-primary) !important;
+}
+.bg-edu-white-grey {
+  background-color: var(--edu-white-grey) !important;
+}
+.bg-gradient-primary {
+  background: linear-gradient(
+    135deg,
+    var(--edu-primary) 0%,
+    var(--edu-primary-dark) 100%
+  ) !important;
+}
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--edu-primary) 0%,
+    var(--edu-primary-dark) 100%
+  );
+}
+
+.text-edu-primary {
+  color: var(--edu-primary) !important;
+}
+.text-edu-green {
+  color: var(--edu-green) !important;
+}
+.text-edu-red {
+  color: var(--edu-primary) !important;
+}
+.text-edu-dark-gray {
+  color: var(--edu-dark-gray) !important;
+}
+.hover-text-primary:hover {
+  color: var(--edu-primary) !important;
+}
+
+.border-edu-primary {
+  border-color: var(--edu-primary) !important;
+}
+.border-edu-light-grey {
+  border-color: var(--edu-light-grey) !important;
+}
+
+/* =========================================================
+   7. Forms & Focus
+========================================================= */
+.form-control,
+.form-select {
+  border-radius: var(--radius);
+  border-color: #e5e7eb;
+  padding: 0.65rem 0.9rem;
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  transition: var(--transition);
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--edu-primary);
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Search icon inside input */
+.position-relative svg {
+  opacity: 0.55;
+  transition: var(--transition);
+}
+.position-relative input:focus + svg,
+.position-relative input:hover + svg {
+  opacity: 0.9;
+}
+
+/* =========================================================
+   8. Cards & Hover
+========================================================= */
+.card {
+  border-radius: var(--radius);
+  background: var(--clr-surface);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+.card-hover {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* CourseCard / CourseListItem wrappers */
+.course-card,
+.course-list-item {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--clr-surface);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+.course-card:hover,
+.course-list-item:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-3px);
+}
+
+/* Thumbnail zoom effect (optional) */
+.course-card .thumb {
+  overflow: hidden;
+}
+.course-card .thumb img {
+  transition: transform 0.4s ease;
+}
+.course-card:hover .thumb img {
+  transform: scale(1.08);
+}
+
+/* Badge / Level pill */
+.badge-level {
+  background: var(--bs-dark);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* =========================================================
+   9. Breadcrumb & Headers
+========================================================= */
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--clr-muted);
+}
+.display-4 {
+  line-height: 1.2;
+}
+
+/* =========================================================
+   10. Pagination
+========================================================= */
+.pagination .page-link {
+  border: none;
+  color: var(--clr-text);
+  margin: 0 0.15rem;
+  border-radius: 10px;
+  transition: var(--transition);
+  background: var(--clr-surface);
+}
+.pagination .page-item.active .page-link {
+  background: var(--edu-primary);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.pagination .page-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.dark .pagination .page-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* =========================================================
+   11. Empty State
+========================================================= */
+.empty-state svg {
+  opacity: 0.35;
+  transition: var(--transition);
+}
+.empty-state:hover svg {
+  opacity: 0.55;
+}
+
+/* =========================================================
+   12. CTA Section
+========================================================= */
+.card.bg-edu-primary {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: #fff;
+}
+.card.bg-edu-primary .btn {
+  border-radius: var(--radius);
+  box-shadow: none;
+  transition: var(--transition);
+}
+.card.bg-edu-primary .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+/* =========================================================
+   13. Animations
+========================================================= */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.hero-icon-bounce {
+  animation: bounce 2.5s infinite;
+}
+
+/* =========================================================
+   14. TinyMCE tweaks (jika dipakai)
+========================================================= */
+.tox .tox-editor-header {
+  border-color: var(--edu-light-grey) !important;
+}
+.tox .tox-toolbar__primary {
+  background: #f8f9fa !important;
+}
+
+/* Hide specific UI */
+.hide-rating,
+.hide-price,
+.hide-statistics,
+.hide-recent-activity,
+.hide-analytics,
+.hide-notifications,
+[data-hide="rating"],
+[data-hide="price"],
+[data-hide="statistics"],
+[data-hide="recent-activity"],
+[data-hide="analytics"],
+[data-hide="notifications"] {
+  display: none !important;
+}
+
+/* =========================================================
+   15. Responsive tweaks
+========================================================= */
+@media (max-width: 992px) {
+  .display-4 {
+    font-size: 2rem;
+  }
+  .h-12 {
+    height: 44px;
+  }
+
+  /* filter row -> 1 kolom */
+  .card-body .row.g-3 > [class*="col-lg-"] {
+    width: 100%;
+  }
+}
+@media (max-width: 576px) {
+  .breadcrumb {
+    font-size: 0.75rem;
+  }
+  .pagination .page-link {
+    padding: 0.35rem 0.6rem;
+  }
+  .row.g-4 > [class*="col-"] {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { localStorageService } from "../services/localStorageService";
 import { Link } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import CourseListItem from "../components/CourseListItem";
 import CourseCard from "../components/CourseCard";
+import "../styles/Kursus.css";
 
 const Kursus = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,15 +24,17 @@ const Kursus = () => {
       try {
         // Get all courses from localStorage
         const allCourses = localStorageService.getCourses();
-        
+
         // Filter only published courses
-        const publishedCourses = allCourses.filter(course => course.status === "PUBLISHED");
-        
+        const publishedCourses = allCourses.filter(
+          (course) => course.status === "PUBLISHED"
+        );
+
         setCourses(publishedCourses);
-        
+
         // Extract unique categories from courses
         const uniqueCategories = ["Semua Kategori"];
-        publishedCourses.forEach(course => {
+        publishedCourses.forEach((course) => {
           if (course.category && !uniqueCategories.includes(course.category)) {
             uniqueCategories.push(course.category);
           }
@@ -50,11 +51,11 @@ const Kursus = () => {
     fetchData();
 
     // Add event listener for storage changes
-    window.addEventListener('storage', fetchData);
-    
+    window.addEventListener("storage", fetchData);
+
     // Cleanup event listener on unmount
     return () => {
-      window.removeEventListener('storage', fetchData);
+      window.removeEventListener("storage", fetchData);
     };
   }, []);
 
@@ -111,7 +112,7 @@ const Kursus = () => {
   const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
   const currentCourses = filteredCourses.slice(
     indexOfFirstCourse,
-    indexOfLastCourse,
+    indexOfLastCourse
   );
 
   const handlePageChange = (pageNumber) => {
@@ -155,8 +156,7 @@ const Kursus = () => {
             <div className="col-lg-4 text-center">
               <div
                 className="bg-edu-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                style={{ width: "120px", height: "120px" }}
-              >
+                style={{ width: "120px", height: "120px" }}>
                 <svg width="60" height="60" viewBox="0 0 24 24" fill="white">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
@@ -191,8 +191,7 @@ const Kursus = () => {
                       width="20"
                       height="20"
                       viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
+                      fill="currentColor">
                       <path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z" />
                     </svg>
                   </div>
@@ -202,8 +201,7 @@ const Kursus = () => {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="form-select h-12"
-                  >
+                    className="form-select h-12">
                     {categories.map((category) => (
                       <option key={category} value={category}>
                         {category}
@@ -216,8 +214,7 @@ const Kursus = () => {
                   <select
                     value={selectedLevel}
                     onChange={(e) => setSelectedLevel(e.target.value)}
-                    className="form-select h-12"
-                  >
+                    className="form-select h-12">
                     {levels.map((level) => (
                       <option key={level} value={level}>
                         {level}
@@ -230,8 +227,7 @@ const Kursus = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="form-select h-12"
-                  >
+                    className="form-select h-12">
                     {sortOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -242,8 +238,7 @@ const Kursus = () => {
                 <div className="col-lg-2">
                   <button
                     onClick={clearFilters}
-                    className="btn btn-outline-secondary w-100 h-12"
-                  >
+                    className="btn btn-outline-secondary w-100 h-12">
                     Reset Filter
                   </button>
                 </div>
@@ -269,28 +264,24 @@ const Kursus = () => {
                 <button
                   type="button"
                   className={`btn btn-sm ${viewMode === "grid" ? "btn-edu-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setViewMode("grid")}
-                >
+                  onClick={() => setViewMode("grid")}>
                   <svg
                     width="16"
                     height="16"
                     viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                    fill="currentColor">
                     <path d="M4 11h5V5H4v6zM4 18h5v-6H4v6zM10 18h5v-6h-5v6zM15 5v6h5V5h-5z" />
                   </svg>
                 </button>
                 <button
                   type="button"
                   className={`btn btn-sm ${viewMode === "list" ? "btn-edu-primary" : "btn-outline-secondary"}`}
-                  onClick={() => setViewMode("list")}
-                >
+                  onClick={() => setViewMode("list")}>
                   <svg
                     width="16"
                     height="16"
                     viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                    fill="currentColor">
                     <path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" />
                   </svg>
                 </button>
@@ -324,19 +315,16 @@ const Kursus = () => {
                 <nav aria-label="Course pagination">
                   <ul className="pagination justify-content-center">
                     <li
-                      className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-                    >
+                      className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                       <button
                         className="page-link"
                         onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
+                        disabled={currentPage === 1}>
                         <svg
                           width="16"
                           height="16"
                           viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
+                          fill="currentColor">
                           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
                         </svg>
                       </button>
@@ -347,12 +335,10 @@ const Kursus = () => {
                       return (
                         <li
                           key={pageNumber}
-                          className={`page-item ${currentPage === pageNumber ? "active" : ""}`}
-                        >
+                          className={`page-item ${currentPage === pageNumber ? "active" : ""}`}>
                           <button
                             className="page-link"
-                            onClick={() => handlePageChange(pageNumber)}
-                          >
+                            onClick={() => handlePageChange(pageNumber)}>
                             {pageNumber}
                           </button>
                         </li>
@@ -360,19 +346,16 @@ const Kursus = () => {
                     })}
 
                     <li
-                      className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}
-                    >
+                      className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
                       <button
                         className="page-link"
                         onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
+                        disabled={currentPage === totalPages}>
                         <svg
                           width="16"
                           height="16"
                           viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
+                          fill="currentColor">
                           <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                         </svg>
                       </button>
@@ -389,8 +372,7 @@ const Kursus = () => {
                   height="80"
                   viewBox="0 0 24 24"
                   fill="none"
-                  className="text-muted"
-                >
+                  className="text-muted">
                   <path
                     d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"
                     stroke="currentColor"
@@ -424,14 +406,12 @@ const Kursus = () => {
               <div className="d-flex justify-content-center gap-3">
                 <Link
                   to="/contact"
-                  className="btn btn-light font-jost fw-medium"
-                >
+                  className="btn btn-light font-jost fw-medium">
                   Hubungi Kami
                 </Link>
                 <Link
                   to="/suggest-course"
-                  className="btn btn-outline-light font-jost fw-medium"
-                >
+                  className="btn btn-outline-light font-jost fw-medium">
                   Saran Kursus
                 </Link>
               </div>
@@ -439,8 +419,6 @@ const Kursus = () => {
           </div>
         </div>
       </main>
-
-
     </div>
   );
 };

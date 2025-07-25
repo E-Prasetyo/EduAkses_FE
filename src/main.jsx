@@ -3,14 +3,15 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { localStorageService } from './services/localStorageService';
+import { localStorageService } from "./services/localStorageService";
 
 // Import Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import "bootstrap-icons/font/bootstrap-icons.css";
 
 // Import Global CSS
-import "./styles.css";
+import "./styles/styles.css";
 
 // Layout Components
 import Header from "./components/Header";
@@ -28,6 +29,7 @@ import Profile from "./pages/Profile";
 import Learning from "./pages/Learning";
 import Quiz from "./pages/Quiz";
 import Diskusi from "./pages/Diskusi";
+import DetailDiskusi from "./pages/DetailDiskusi";
 
 // Student Pages
 import StudentDashboard from "./pages/StudentDashboard";
@@ -50,24 +52,34 @@ import NotFound from "./pages/NotFound";
 // MIGRASI DATA COURSE GAMBAR BLOB KE BASE64/DEFAULT
 (function migrateCourseImages() {
   try {
-    const courses = JSON.parse(localStorage.getItem('eduakses_courses')) || [];
+    const courses = JSON.parse(localStorage.getItem("eduakses_courses")) || [];
     let changed = false;
-    const migrated = courses.map(course => {
+    const migrated = courses.map((course) => {
       let updated = { ...course };
-      if (updated.thumbnail && typeof updated.thumbnail === 'string' && updated.thumbnail.startsWith('blob:')) {
-        updated.thumbnail = '';
+      if (
+        updated.thumbnail &&
+        typeof updated.thumbnail === "string" &&
+        updated.thumbnail.startsWith("blob:")
+      ) {
+        updated.thumbnail = "";
         changed = true;
       }
-      if (updated.coverImage && typeof updated.coverImage === 'string' && updated.coverImage.startsWith('blob:')) {
-        updated.coverImage = '';
+      if (
+        updated.coverImage &&
+        typeof updated.coverImage === "string" &&
+        updated.coverImage.startsWith("blob:")
+      ) {
+        updated.coverImage = "";
         changed = true;
       }
       return updated;
     });
     if (changed) {
-      localStorage.setItem('eduakses_courses', JSON.stringify(migrated));
+      localStorage.setItem("eduakses_courses", JSON.stringify(migrated));
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    /* ignore */
+  }
 })();
 
 // Migration script untuk memperbaiki data course
@@ -76,10 +88,10 @@ const migrateCourseData = () => {
     // Uncomment baris di bawah ini untuk membersihkan localStorage dan membuat ulang data
     // localStorage.removeItem('eduakses_courses');
     // localStorage.removeItem('eduakses_users');
-    
+
     const courses = localStorageService.getCourses();
     const users = localStorageService.getUsers();
-    
+
     if (!courses || courses.length === 0) {
       // Komentari/hapus inisialisasi sampleCourse
       // localStorageService.saveCourses([sampleCourse]);
@@ -88,24 +100,24 @@ const migrateCourseData = () => {
     }
 
     let hasChanges = false;
-    const updatedCourses = courses.map(course => {
+    const updatedCourses = courses.map((course) => {
       if (!course.modules) return course;
 
-      const updatedModules = course.modules.map(module => {
+      const updatedModules = course.modules.map((module) => {
         if (!module.lessons) return module;
 
-        const updatedLessons = module.lessons.map(lesson => {
+        const updatedLessons = module.lessons.map((lesson) => {
           let updatedLesson = { ...lesson };
 
           // Pastikan field yang diperlukan ada
           if (!updatedLesson.textContent) {
-            updatedLesson.textContent = lesson.content || '';
+            updatedLesson.textContent = lesson.content || "";
           }
           if (!updatedLesson.videoUrl) {
-            updatedLesson.videoUrl = lesson.videoUrl || '';
+            updatedLesson.videoUrl = lesson.videoUrl || "";
           }
           if (!updatedLesson.type) {
-            updatedLesson.type = lesson.videoUrl ? 'video' : 'text';
+            updatedLesson.type = lesson.videoUrl ? "video" : "text";
           }
 
           // Jika ada perubahan, tandai
@@ -121,24 +133,28 @@ const migrateCourseData = () => {
 
       // Perbaiki teacherId jika tidak ada atau tidak sesuai
       let updatedCourse = { ...course, modules: updatedModules };
-      
+
       // Hanya perbaiki jika course tidak memiliki teacherId atau instructor
       if (!updatedCourse.teacherId) {
         // Coba cari user berdasarkan instructor name
-        const matchingUser = users.find(u => u.name === updatedCourse.instructor && u.role === 'teacher');
+        const matchingUser = users.find(
+          (u) => u.name === updatedCourse.instructor && u.role === "teacher"
+        );
         if (matchingUser) {
           updatedCourse.teacherId = matchingUser.id;
           hasChanges = true;
-        } else if (updatedCourse.instructor === 'Ahmad Santoso') {
+        } else if (updatedCourse.instructor === "Ahmad Santoso") {
           // Fallback untuk course lama
-          updatedCourse.teacherId = 'teacher1';
+          updatedCourse.teacherId = "teacher1";
           hasChanges = true;
         }
       }
-      
+
       if (!updatedCourse.instructor && updatedCourse.teacherId) {
         // Coba cari instructor berdasarkan teacherId
-        const matchingUser = users.find(u => u.id === updatedCourse.teacherId);
+        const matchingUser = users.find(
+          (u) => u.id === updatedCourse.teacherId
+        );
         if (matchingUser) {
           updatedCourse.instructor = matchingUser.name;
           hasChanges = true;
@@ -150,10 +166,10 @@ const migrateCourseData = () => {
 
     if (hasChanges) {
       localStorageService.saveCourses(updatedCourses);
-      console.log('Course data migrated successfully');
+      console.log("Course data migrated successfully");
     }
   } catch (error) {
-    console.error('Error migrating course data:', error);
+    console.error("Error migrating course data:", error);
   }
 };
 
@@ -206,6 +222,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Diskusi />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/:id"
+              element={
+                <ProtectedRoute>
+                  <DetailDiskusi />
                 </ProtectedRoute>
               }
             />
@@ -325,5 +349,5 @@ const App = () => (
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
