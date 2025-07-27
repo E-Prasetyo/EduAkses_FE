@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/authentication",
-      "destination": "http://34.143.132.222/api/authentication"
+      "source": "/api/(.*)",
+      "destination": "https://your-backend.com/api/$1"
     }
   ]
 }
