@@ -12,7 +12,10 @@ export const authAPI = {
   // Login user
   login: async (email, password) => {
     try {
-      const response = await axiosInstance.post('/auth/login', { email, password });
+      const response = await axiosInstance.post('/api/authentications', { email, password });
+      if (response.status == 201) {
+        localStorage.setItem('token', response.data.data.accessToken)
+      };
       return handleResponse(response);
     } catch (error) {
       // Fallback ke localStorage jika koneksi ke backend gagal
@@ -36,7 +39,7 @@ export const authAPI = {
   // Register user
   register: async (userData) => {
     try {
-      const response = await axiosInstance.post('/auth/register', userData);
+      const response = await axiosInstance.post('/api/register', userData);
       return handleResponse(response);
     } catch (error) {
       // Fallback ke localStorage jika koneksi ke backend gagal
@@ -68,8 +71,9 @@ export const authAPI = {
   // Get current user
   getCurrentUser: async () => {
     try {
-      const response = await axiosInstance.get('/auth/me');
-      return handleResponse(response);
+      const response = await axiosInstance.post('/api/auth/me');
+   //   localStorage.setItem("userData", JSON.stringify(response.data.data));
+      return handleResponse(response.data);
     } catch (error) {
       // Fallback ke localStorage jika koneksi ke backend gagal
       if (error.isLocalFallback) {
@@ -101,7 +105,11 @@ export const authAPI = {
   // Update profile
   updateProfile: async (userData) => {
     try {
-      const response = await axiosInstance.put('/auth/profile', userData);
+      const response = await axiosInstance.put('/api/users', userData,{
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       return handleResponse(response);
     } catch (error) {
       // Fallback ke localStorage jika koneksi ke backend gagal
@@ -118,7 +126,7 @@ export const authAPI = {
           localStorageService.saveUsers(updatedUsers);
           // Update current user data
           localStorageService.updateCurrentUser(updatedUser);
-          return updatedUser;
+          // return updatedUser;
         } else {
           throw new Error('User tidak ditemukan');
         }

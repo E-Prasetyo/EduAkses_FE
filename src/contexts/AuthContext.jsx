@@ -43,9 +43,10 @@ const AuthProvider = ({ children }) => {
   const login = async (email, password, rememberMe) => {
     try {
       const response = await authAPI.login(email, password);
-      const { user: userData, token } = response;
-
+      const { token } = response;
       // Store user data
+      const userData = await authAPI.getCurrentUser();
+      
       localStorage.setItem("userData", JSON.stringify(userData));
       
       // Store token based on remember me preference

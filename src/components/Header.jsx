@@ -75,6 +75,7 @@ const Header = () => {
     setIsNavOpen(!isNavOpen);
   };
 
+
   return (
     <nav
       className={`navbar navbar-expand-lg navbar-light bg-white border-bottom border-edu-light-grey sticky-top header-nav ${isScrolled ? "scrolled" : ""}`}>

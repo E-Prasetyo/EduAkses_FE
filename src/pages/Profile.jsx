@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { localStorageService } from "../services/localStorageService";
+import Swal from "sweetalert2";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -13,8 +14,9 @@ const Profile = () => {
     bio: user?.bio || "Belum ada bio",
     role: user?.role === "admin" ? "Admin" : user?.role === "teacher" ? "Pengajar" : "Pelajar",
     avatar: user?.avatar || "",
-    joinDate: user?.joinDate || user?.createdAt ? new Date(user.createdAt).toLocaleDateString("id-ID", { year: 'numeric', month: 'long' }) : "Januari 2024",
-    specialization: user?.specialization || "",
+    avatarEdit: user?.avatar || "",
+    joinDate: user?.joinDate || ""
+    // specialization: user?.specialization || "",
   });
 
   const [editData, setEditData] = useState({ ...profileData });
@@ -29,22 +31,44 @@ const Profile = () => {
   const handleSave = async () => {
     try {
       // Pastikan role tidak berubah ke string display
-      const fixedEditData = { ...editData, role: user.role };
+      const formData = new FormData();
+      formData.append('fullname', editData.name);
+      formData.append('description', editData.name);
+      formData.append('image', editData.avatar);
+
       
-      // Simpan ke localStorage users terlebih dahulu
-      const success = localStorageService.updateUser(user.id, { ...user, ...fixedEditData });
-      
+      //Update profile melalui AuthContext
+      const result = await updateProfile(formData);
+
+      const newData = {
+        name: result?.data.name,
+        email: result?.data.email,
+        bio: result?.data.bio,
+        role: result?.data.role,
+        avatar: result?.data?.avatar,
+        avatarEdit: result?.data?.avatar || "",
+        joinDate: result?.data?.created_at || ""
+      }
+
+      const fixedEditData = { ...newData, role: result?.data?.role };
+      // // Simpan ke localStorage users terlebih dahulu
+      const success = localStorageService.updateUser(result?.data.id, { ...user, ...fixedEditData });
+
+            
       if (!success) {
         throw new Error("Gagal menyimpan data ke localStorage");
       }
       
-      // Update profile melalui AuthContext
-      await updateProfile(fixedEditData);
-      
       setProfileData(fixedEditData);
       setIsEditing(false);
       
-      alert("Profil berhasil diperbarui!");
+    if (result?.status == 'success') {
+      Swal.fire({
+        title: `${result?.status}`,
+        text: `${result?.message}`,
+        icon: "success"
+      });
+    }
     } catch (error) {
       alert(error.message);
     }
@@ -71,7 +95,9 @@ const Profile = () => {
       reader.onload = (e) => {
         setEditData({
           ...editData,
-          avatar: e.target.result,
+          // avatar: e.target.result,
+          avatar: file,
+          avatarEdit: e.target.result
         });
       };
       reader.readAsDataURL(file);
@@ -99,7 +125,7 @@ const Profile = () => {
             <div className="position-relative d-flex flex-column align-items-center">
               {((isEditing ? editData.avatar : profileData.avatar)) ? (
                 <img
-                  src={isEditing ? editData.avatar : profileData.avatar}
+                  src={isEditing ? editData.avatarEdit : profileData.avatar}
                   alt="Profile"
                   className="rounded-circle border border-white border-4"
                   width="96"
@@ -192,6 +218,7 @@ const Profile = () => {
                       value={editData.email}
                       onChange={handleInputChange}
                       className="form-control h-12"
+                      disabled
                     />
                   ) : (
                     <p className="text-dark py-2 mb-0">
@@ -220,7 +247,7 @@ const Profile = () => {
                   )}
                 </div>
 
-                {isEditing && user?.role === "teacher" && (
+                {/* {isEditing && user?.role === "teacher" && (
                   <div className="col-12">
                     <label className="form-label fw-medium text-dark">
                       Spesialisasi
@@ -244,7 +271,7 @@ const Profile = () => {
                       {profileData.specialization || '-'}
                     </p>
                   </div>
-                )}
+                )} */}
 
                 {isEditing && (
                   <div className="col-12 pt-3">

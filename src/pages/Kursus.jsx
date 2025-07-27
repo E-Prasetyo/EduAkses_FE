@@ -4,42 +4,54 @@ import { Link } from "react-router-dom";
 import CourseListItem from "../components/CourseListItem";
 import CourseCard from "../components/CourseCard";
 import "../styles/Kursus.css";
+import { courseAPI } from "../services/api";
+import { userAPI } from "../services/userAPI";
 
 const Kursus = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
-  const [selectedLevel, setSelectedLevel] = useState("Semua Level");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [sortBy, setSortBy] = useState("Terbaru");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [currentPage, setCurrentPage] = useState(1);
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [levels, setLevels] = useState([]);
+  const [totalCourse, setTotalCourse] = useState(0);
+  const [totalPage, setTotalPage] = useState(0);
+  const [limit, setLimit] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const coursesPerPage = 9;
+  // const coursesPerPage = 9;
 
   // Fetch courses from localStorage
   useEffect(() => {
-    const fetchData = () => {
-      setIsLoading(true);
+    const fetchData = async () => {
+      // setIsLoading(true);
       try {
+
+        const categories = await userAPI.getCategories();
+        setCategories(categories.data.categories);
+
+        const levels = await userAPI.getLevels();
+        setLevels(levels.data.levels);
+
         // Get all courses from localStorage
-        const allCourses = localStorageService.getCourses();
+        // const allCourses = localStorageService.getCourses();
+        const queryParams = new URLSearchParams();
 
-        // Filter only published courses
-        const publishedCourses = allCourses.filter(
-          (course) => course.status === "PUBLISHED"
-        );
+        if (searchTerm) queryParams.append("title", searchTerm);
+        if (selectedCategory !== "Semua Kategori") queryParams.append("category", selectedCategory);
+        if (selectedLevel !== "Semua Level") queryParams.append("level", selectedLevel);
+        if (sortBy !== "Terbaru") queryParams.append("sort", sortBy.toLowerCase()); // e.g., rating_tertinggi
+        queryParams.append('page',currentPage)
+          
+        const res = await courseAPI.getAllCourses(`?${queryParams.toString()}`);
+        setCourses(res.data.content);
+        setCurrentPage(res.data.pagination.page);
+        setTotalCourse(res.data.pagination.total);
+        setTotalPage(res.data.pagination.totalPages);
+        setLimit(res.data.pagination.limit)
 
-        setCourses(publishedCourses);
-
-        // Extract unique categories from courses
-        const uniqueCategories = ["Semua Kategori"];
-        publishedCourses.forEach((course) => {
-          if (course.category && !uniqueCategories.includes(course.category)) {
-            uniqueCategories.push(course.category);
-          }
-        });
-        setCategories(uniqueCategories);
       } catch (error) {
         console.error("Error fetching courses:", error);
         setCourses([]);
@@ -51,69 +63,19 @@ const Kursus = () => {
     fetchData();
 
     // Add event listener for storage changes
-    window.addEventListener("storage", fetchData);
+    // window.addEventListener("storage", fetchData);
 
     // Cleanup event listener on unmount
     return () => {
-      window.removeEventListener("storage", fetchData);
+      // window.removeEventListener("storage", fetchData);
     };
-  }, []);
+  }, [searchTerm, selectedCategory, selectedLevel, sortBy, currentPage]);
 
-  // levels is declared below
-
-  const levels = ["Semua Level", "Pemula", "Menengah", "Lanjutan"];
 
   const sortOptions = [
     "Terbaru",
     "Terpopuler",
-    "Rating Tertinggi",
-    "Harga Terendah",
-    "Durasi Terpendek",
   ];
-
-  // Filter courses based on search and filters
-  const filteredCourses = courses
-    .filter((course) => {
-      const matchesSearch = course.title
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        selectedCategory === "Semua Kategori" ||
-        course.category === selectedCategory;
-      const matchesLevel =
-        selectedLevel === "Semua Level" || course.level === selectedLevel;
-      return matchesSearch && matchesCategory && matchesLevel;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "Terpopuler":
-          return b.students - a.students;
-        case "Rating Tertinggi":
-          return b.rating - a.rating;
-        case "Harga Terendah":
-          if (a.price === "free" && b.price !== "free") return -1;
-          if (a.price !== "free" && b.price === "free") return 1;
-          if (a.price === "free" && b.price === "free") return 0;
-          const priceA = a.discountPrice || a.originalPrice;
-          const priceB = b.discountPrice || b.originalPrice;
-          return priceA - priceB;
-        case "Durasi Terpendek":
-          const durationA = parseInt(a.duration);
-          const durationB = parseInt(b.duration);
-          return durationA - durationB;
-        default:
-          return 0;
-      }
-    });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredCourses.length / coursesPerPage);
-  const indexOfLastCourse = currentPage * coursesPerPage;
-  const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
-  const currentCourses = filteredCourses.slice(
-    indexOfFirstCourse,
-    indexOfLastCourse
-  );
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -122,9 +84,9 @@ const Kursus = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
-    setSelectedCategory("Semua Kategori");
-    setSelectedLevel("Semua Level");
-    setSortBy("Terbaru");
+    setSelectedCategory("");
+    setSelectedLevel("");
+    setSortBy("");
     setCurrentPage(1);
   };
 
@@ -150,7 +112,7 @@ const Kursus = () => {
               </h1>
               <p className="lead font-jost mb-0">
                 Temukan kursus terbaik untuk mengembangkan skill dan karir Anda.
-                Lebih dari {courses.length} kursus berkualitas menanti!
+                Lebih dari {totalCourse} kursus berkualitas menanti!
               </p>
             </div>
             <div className="col-lg-4 text-center">
@@ -162,7 +124,7 @@ const Kursus = () => {
                 </svg>
               </div>
               <h4 className="font-exo fw-semibold text-warning">
-                {courses.length}+ Kursus
+                {totalCourse}+ Kursus
               </h4>
               <p className="font-jost text-light mb-0">Tersedia untuk Anda</p>
             </div>
@@ -202,9 +164,12 @@ const Kursus = () => {
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="form-select h-12">
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
+                    <option value={""}>
+                      Semua category
+                    </option>
+                    {Array.isArray(categories) && categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.title}
                       </option>
                     ))}
                   </select>
@@ -215,9 +180,12 @@ const Kursus = () => {
                     value={selectedLevel}
                     onChange={(e) => setSelectedLevel(e.target.value)}
                     className="form-select h-12">
-                    {levels.map((level) => (
-                      <option key={level} value={level}>
-                        {level}
+                     <option value={""}>
+                      Semua level
+                    </option>
+                    {Array.isArray(levels) && levels.map((level) => (
+                      <option key={level.id} value={level.id}>
+                        {level.title}
                       </option>
                     ))}
                   </select>
@@ -250,7 +218,7 @@ const Kursus = () => {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
               <h2 className="h5 font-exo fw-semibold mb-1">
-                {filteredCourses.length} Kursus Ditemukan
+                {totalCourse} Kursus Ditemukan
               </h2>
               <p className="text-muted font-jost mb-0">
                 {searchTerm && `Hasil pencarian untuk "${searchTerm}"`}
@@ -290,11 +258,11 @@ const Kursus = () => {
           </div>
 
           {/* Course List/Grid */}
-          {currentCourses.length > 0 ? (
+          {courses?.length > 0 ? (
             <>
               {viewMode === "grid" ? (
                 <div className="row g-4 mb-5">
-                  {currentCourses.map((course) => (
+                  {Array.isArray(courses) && courses.map((course) => (
                     <div key={course.id} className="col-lg-4 col-md-6 mb-4">
                       <CourseCard course={course} />
                     </div>
@@ -302,7 +270,7 @@ const Kursus = () => {
                 </div>
               ) : (
                 <div className="row g-4 mb-5">
-                  {currentCourses.map((course) => (
+                  {Array.isArray(courses) && courses.map((course) => (
                     <div key={course.id} className="col-12 mb-4">
                       <CourseListItem course={course} />
                     </div>
@@ -311,7 +279,7 @@ const Kursus = () => {
               )}
 
               {/* Pagination */}
-              {totalPages > 1 && (
+              {/* {courses?.length > 1 && ( */}
                 <nav aria-label="Course pagination">
                   <ul className="pagination justify-content-center">
                     <li
@@ -330,7 +298,7 @@ const Kursus = () => {
                       </button>
                     </li>
 
-                    {[...Array(totalPages)].map((_, index) => {
+                    {[...Array(totalPage)].map((_, index) => {
                       const pageNumber = index + 1;
                       return (
                         <li
@@ -346,11 +314,11 @@ const Kursus = () => {
                     })}
 
                     <li
-                      className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                      className={`page-item ${currentPage === courses?.length ? "disabled" : ""}`}>
                       <button
                         className="page-link"
                         onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}>
+                        disabled={currentPage === courses?.length}>
                         <svg
                           width="16"
                           height="16"
@@ -362,7 +330,7 @@ const Kursus = () => {
                     </li>
                   </ul>
                 </nav>
-              )}
+              {/* )}  */}
             </>
           ) : (
             <div className="text-center py-5">

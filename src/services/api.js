@@ -22,9 +22,9 @@ const extractCourseId = (slug) => {
 
 export const courseAPI = {
   // Fetch all courses
-  getAllCourses: async () => {
+  getAllCourses: async (query = "") => {
     try {
-      const response = await axiosInstance.get('/courses');
+      const response = await axiosInstance.get(`/api/contents${query}`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);

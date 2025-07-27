@@ -1,20 +1,35 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { userAPI } from "../services/userAPI";
+import Swal from "sweetalert2";
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
-    name: "",
+    fullname: "",
     password: "",
     confirmPassword: "",
-    role: "student",
+    role: "",
     agreement: false,
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [optionResult, setOptionResult] = useState([]);
+
+
+  useEffect(() => {
+    userAPI.getRoles()
+    .then((res) => {
+      // console.log("Role result:", res.data);
+      setOptionResult(res.data);
+    })
+    .catch((err) => {
+      console.error("Gagal ambil role:", err);
+    });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -23,13 +38,14 @@ const Register = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
+  
 
   const validateForm = () => {
     if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
       setError("Format email tidak valid");
       return false;
     }
-    if (!formData.name || formData.name.length < 3) {
+    if (!formData.fullname || formData.fullname.length < 3) {
       setError("Nama minimal 3 karakter");
       return false;
     }
@@ -56,12 +72,19 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      await register(formData);
-      if (formData.role === 'teacher') {
-        alert('Pendaftaran berhasil! Silakan tunggu persetujuan admin untuk mengaktifkan akun Anda.');
-      } else {
-        alert('Pendaftaran berhasil! Silakan login untuk melanjutkan.');
+      const dataSend = {
+        email: email.value,
+        fullname: fullname.value,
+        password: password.value,
+        confirmPassword: confirmPassword.value,
+        role: role.value
       }
+      const result = await register(dataSend);  
+      Swal.fire({
+        title: result.status,
+        text: result.message,
+        icon: "success"
+      });
       navigate("/login");
     } catch (err) {
       setError(err.message || "Gagal mendaftar. Silakan coba lagi.");
@@ -70,7 +93,10 @@ const Register = () => {
     }
   };
 
+
+
   return (
+
     <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-md-6 col-lg-5">
@@ -104,15 +130,15 @@ const Register = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label htmlFor="name" className="form-label font-jost fw-medium">
+                  <label htmlFor="fullname" className="form-label font-jost fw-medium">
                     Nama Lengkap
                   </label>
                   <input
                     type="text"
                     className="form-control"
-                    id="name"
-                    name="name"
-                    value={formData.name}
+                    id="fullname"
+                    name="fullname"
+                    value={formData.fullname}
                     onChange={handleChange}
                     required
                   />
@@ -129,10 +155,14 @@ const Register = () => {
                     value={formData.role}
                     onChange={handleChange}
                   >
-                    <option value="student">Pelajar</option>
-                    <option value="teacher">Pengajar</option>
+                  {Array.isArray(optionResult) && optionResult.map((opt, index) => (
+                    <option key={index} value={opt.id}>
+                      {opt.name?.toUpperCase()}
+                    </option>
+                  ))}
                   </select>
                 </div>
+
 
                 <div className="mb-3">
                   <label htmlFor="password" className="form-label font-jost fw-medium">

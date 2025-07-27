@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Gunakan URL API lokal untuk development dengan localStorage
-const baseURL = 'http://localhost:5173/api';
+const baseURL = process.env.VITE_API_REF;
 
 const axiosInstance = axios.create({
   baseURL,
@@ -50,7 +50,7 @@ axiosInstance.interceptors.response.use(
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
       localStorage.removeItem('userData');
-      window.location.href = '/login';
+      //window.location.href = '/login';
     }
     
     return Promise.reject(error);

@@ -86,5 +86,33 @@ export const userAPI = {
     } catch (error) {
       return handleError(error);
     }
+  },
+
+   // Reject teacher (admin only)
+  getRoles: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/roles/users`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  getCategories: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/categories`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  getLevels: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/levels`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
   }
 };

@@ -113,7 +113,7 @@ const CourseListItem = ({ course }) => {
 
             {/* Price and Action */}
             <div className="d-flex align-items-center justify-content-between">
-              <div>
+              {/* <div>
                 {course.price === "free" ? (
                   <span className="h5 mb-0 text-edu-green font-exo fw-bold">
                     GRATIS
@@ -137,7 +137,7 @@ const CourseListItem = ({ course }) => {
                     )}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               <Link
                 to={`/kursus/${course.id}`}

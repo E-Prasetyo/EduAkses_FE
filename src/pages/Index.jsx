@@ -6,49 +6,61 @@ import StatsCounter from "../components/StatsCounter";
 import { useState, useEffect } from "react";
 import { localStorageService } from "../services/localStorageService";
 import "../styles/index.css";
+import { courseAPI } from "../services/api";
 
 const Index = () => {
   const [featuredCourses, setFeaturedCourses] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Fetch courses from localStorage
-    const fetchCourses = () => {
-      setIsLoading(true);
-      try {
+    // const fetchCourses = () => {
+      // setIsLoading(true);
+      // try {
         // Get all courses from localStorage
-        const allCourses = localStorageService.getCourses();
-
+        // const allCourses = localStorageService.getCourses();
+        
         // Filter only published courses
-        const publishedCourses = allCourses.filter(
-          (course) => course.status === "PUBLISHED"
-        );
+        // const publishedCourses = allCourses.filter(
+        //   (course) => course.status === "PUBLISHED"
+        // );
 
         // Sort by number of students (popularity)
-        const sortedCourses = publishedCourses.sort(
-          (a, b) => b.students - a.students
-        );
+        // const sortedCourses = publishedCourses.sort(
+        //   (a, b) => b.students - a.students
+        // );
 
-        // Take top 10 courses
-        const topCourses = sortedCourses.slice(0, 10);
+        // // Take top 10 courses
+        // const topCourses = sortedCourses.slice(0, 10);
 
-        setFeaturedCourses(topCourses);
-      } catch (error) {
-        console.error("Error fetching courses:", error);
+        // setFeaturedCourses(topCourses);
+      // } catch (error) {
+      //   console.error("Error fetching courses:", error);
+      //   setFeaturedCourses([]);
+      // } finally {
+      //   setIsLoading(false);
+      // }
+    // };
+
+    // fetchCourses();
+    courseAPI.getAllCourses()
+      .then((res) => {
+        // console.log("Role result:", res.data);
+        setFeaturedCourses(res.data);
+        setIsLoading(true);
+      })
+      .catch((err) => {
+        console.error("Gagal ambil course:", err);
         setFeaturedCourses([]);
-      } finally {
         setIsLoading(false);
-      }
-    };
-
-    fetchCourses();
+    });
 
     // Add event listener for storage changes
-    window.addEventListener("storage", fetchCourses);
+    // window.addEventListener("storage", fetchCourses);
 
     // Cleanup event listener on unmount
     return () => {
-      window.removeEventListener("storage", fetchCourses);
+      // window.removeEventListener("storage", fetchCourses);
     };
   }, []);
 
@@ -84,6 +96,7 @@ const Index = () => {
       rating: 5,
     },
   ];
+
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -183,11 +196,20 @@ const Index = () => {
           </div>
 
           <div className="row g-4">
-            {featuredCourses.map((course) => (
+            {Array.isArray(featuredCourses) && featuredCourses.map((course) => (
               <div key={course.id} className="col-lg-4 col-md-6">
+                <p>{course.fullname}</p>
                 <CourseCard course={course} />
               </div>
             ))}
+            {isLoading ? (
+                    <span
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
+                  ) : null}
+            {isLoading ? "Sedang mencari data..." : "Data Kosong"}
           </div>
 
           <div className="text-center mt-5">
