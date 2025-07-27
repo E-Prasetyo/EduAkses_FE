@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Gunakan URL API lokal untuk development dengan localStorage
-const baseURL = process.env.VITE_API_REF;
+const baseURL = 'http://34.143.132.222';
 
 const axiosInstance = axios.create({
   baseURL,

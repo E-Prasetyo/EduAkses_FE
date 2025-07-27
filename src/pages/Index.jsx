@@ -14,46 +14,34 @@ const Index = () => {
 
   useEffect(() => {
     // Fetch courses from localStorage
-    // const fetchCourses = () => {
-      // setIsLoading(true);
-      // try {
+    const fetchCourses = async() => {
+      setIsLoading(true);
+      try {
         // Get all courses from localStorage
         // const allCourses = localStorageService.getCourses();
+        const topCourses = await courseAPI.getAllCoursesTOP();
         
-        // Filter only published courses
-        // const publishedCourses = allCourses.filter(
-        //   (course) => course.status === "PUBLISHED"
-        // );
-
-        // Sort by number of students (popularity)
-        // const sortedCourses = publishedCourses.sort(
-        //   (a, b) => b.students - a.students
-        // );
-
-        // // Take top 10 courses
-        // const topCourses = sortedCourses.slice(0, 10);
-
-        // setFeaturedCourses(topCourses);
-      // } catch (error) {
-      //   console.error("Error fetching courses:", error);
-      //   setFeaturedCourses([]);
-      // } finally {
-      //   setIsLoading(false);
-      // }
-    // };
-
-    // fetchCourses();
-    courseAPI.getAllCourses()
-      .then((res) => {
-        // console.log("Role result:", res.data);
-        setFeaturedCourses(res.data);
-        setIsLoading(true);
-      })
-      .catch((err) => {
-        console.error("Gagal ambil course:", err);
+        setFeaturedCourses(topCourses.data.content);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
         setFeaturedCourses([]);
+      } finally {
         setIsLoading(false);
-    });
+      }
+    };
+
+    fetchCourses();
+    // courseAPI.getAllCourses()
+    //   .then((res) => {
+    //     // console.log("Role result:", res.data);
+    //     setFeaturedCourses(res.data);
+    //     setIsLoading(true);
+    //   })
+    //   .catch((err) => {
+    //     console.error("Gagal ambil course:", err);
+    //     setFeaturedCourses([]);
+    //     setIsLoading(false);
+    // });
 
     // Add event listener for storage changes
     // window.addEventListener("storage", fetchCourses);
@@ -97,7 +85,7 @@ const Index = () => {
     },
   ];
 
-
+console.log(featuredCourses)
   return (
     <div className="d-flex flex-column min-vh-100">
       {/* Hero Section */}

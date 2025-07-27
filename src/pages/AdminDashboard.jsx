@@ -32,6 +32,9 @@ const AdminDashboard = () => {
     const allEnrollments = localStorageService.getEnrollments() || [];
     const allNotifications = localStorageService.getNotifications() || [];
 
+    //API
+    // const pendingCourse = 
+
     // Filter pending courses (menunggu review)
     const pending = allCourses.filter(course => course.status === 'PENDING_REVIEW');
     setPendingCourses(pending);

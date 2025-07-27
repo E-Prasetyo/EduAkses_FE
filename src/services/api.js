@@ -30,6 +30,16 @@ export const courseAPI = {
       return handleError(error);
     }
   },
+
+  // Fetch all courses TOP
+  getAllCoursesTOP: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/contents/top`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
   
   // Fetch course by ID or slug
   getCourse: async (courseId) => {
