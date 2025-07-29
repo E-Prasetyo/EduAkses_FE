@@ -31,7 +31,7 @@ export const userAPI = {
   // Update user (admin only)
   updateUser: async (userId, userData) => {
     try {
-      const response = await axiosInstance.put(`/users/${userId}`, userData);
+      const response = await axiosInstance.put(`/users/${userId}`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -51,7 +51,7 @@ export const userAPI = {
   // Get all teachers
   getAllTeachers: async () => {
     try {
-      const response = await axiosInstance.get('/users/teachers');
+      const response = await axiosInstance.get('/api/users/teachers');
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -61,7 +61,27 @@ export const userAPI = {
   // Get all students
   getAllStudents: async () => {
     try {
-      const response = await axiosInstance.get('/users/students');
+      const response = await axiosInstance.get('/api/users/students');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // Get all teachers pending
+  getAllTeachersPending: async () => {
+    try {
+      const response = await axiosInstance.get('/api/users/teacher/pending');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // Get all teachers active
+  getAllTeachersActive: async () => {
+    try {
+      const response = await axiosInstance.get('/api/users/teacher/active');
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -71,7 +91,16 @@ export const userAPI = {
   // Approve teacher (admin only)
   approveTeacher: async (teacherId) => {
     try {
-      const response = await axiosInstance.put(`/users/teachers/${teacherId}/approve`);
+      const response = await axiosInstance.put(`/api/users/${teacherId}/active`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+  // Approve teacher (admin only)
+  inactiveTeacher: async (teacherId) => {
+    try {
+      const response = await axiosInstance.put(`/api/users/${teacherId}/inactive`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -81,7 +110,7 @@ export const userAPI = {
   // Reject teacher (admin only)
   rejectTeacher: async (teacherId) => {
     try {
-      const response = await axiosInstance.put(`/users/teachers/${teacherId}/reject`);
+      const response = await axiosInstance.put(`/api/users/${teacherId}/reject`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -107,6 +136,51 @@ export const userAPI = {
     }
   },
 
+  getCategoriesAdmin: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/categories/admin`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  postCategories: async (newCategory) => {
+    try {
+      const response = await axiosInstance.post(`/api/categories`,newCategory);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+  
+  putCategories: async (newCategory, idCat) => {
+    try {
+      const response = await axiosInstance.put(`/api/categories/${idCat}`,newCategory);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  putCategoriesActive: async (idCat) => {
+    try {
+      const response = await axiosInstance.put(`/api/categories/${idCat}/active`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  putCategoriesInactive: async (idCat) => {
+    try {
+      const response = await axiosInstance.put(`/api/categories/${idCat}/inactive`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
   getLevels: async () => {
     try {
       const response = await axiosInstance.get(`/api/levels`);
@@ -115,4 +189,5 @@ export const userAPI = {
       return handleError(error);
     }
   }
+
 };

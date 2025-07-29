@@ -4,66 +4,90 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
+import { userAPI } from "../services/userAPI";
+import Swal from "sweetalert2";
 
 const CategoryManagement = () => {
   const { user } = useAuth();
   const [categories, setCategories] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [flag, setFlag] = useState(true);
 
   useEffect(() => {
     // Load categories and courses
-    const savedCategories = localStorageService.getCategories();
-    const savedCourses = localStorageService.getCourses() || [];
-    setCourses(savedCourses);
-
+    // const savedCategories = localStorageService.getCategories();
+    // const savedCourses = localStorageService.getCourses() || [];
+    // setCourses(savedCourses);
     // Calculate course count for each category
-    const categoriesWithCounts = savedCategories.map(category => ({
-      ...category,
-      courseCount: savedCourses.filter(course => course.categoryId === category.id).length
-    }));
+    // const categoriesWithCounts = savedCategories.map(category => ({
+    //   ...category,
+    //   courseCount: savedCourses.filter(course => course.categoryId === category.id).length
+    // }));
+    // setCategories(categoriesWithCounts);
+    const fetchCategories = async() => {
+      // setIsLoading(true);
+      try {
+        // Get all courses from localStorage
+        // const allCourses = localStorageService.getCourses();
+        const categories = await userAPI.getCategoriesAdmin();
 
-    setCategories(categoriesWithCounts);
-  }, []);
+        setCategories(categories.data.categories);
+        
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        setCategories([]);
+      } finally {
+        // setIsLoading(false);
+      }
+    };
+  
+    fetchCategories();
+    
+  }, [flag]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
+    id: "",
     name: "",
     description: "",
     isActive: true,
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
+
     if (editingCategory) {
-      // Update existing category
-      const updatedCategories = categories.map((cat) =>
-        cat.id === editingCategory.id ? { ...cat, ...formData } : cat
-      );
-      setCategories(updatedCategories);
-      localStorageService.saveCategories(updatedCategories);
+      const newCategory = {
+        title: formData.name,
+        description: formData.description,
+        isActive: formData.isActive
+      };
+      const response = await userAPI.putCategories(newCategory, formData.id);
+      Swal.fire({
+        title: `${response?.status}`,
+        text: `${response?.message}`,
+        icon: response.status == 'success' ? "success":"error"
+      });
+      setTimeout(() => {
+        setFlag((prev) => !prev);
+      }, 1000);
     } else {
       // Add new category
       const newCategory = {
-        id: `cat${Date.now()}`,
-        ...formData,
-        courseCount: 0,
-        createdAt: new Date().toISOString().split("T")[0],
+        title: formData.name,
+        description: formData.description,
+        isActive: formData.isActive
       };
-      const updatedCategories = [...categories, newCategory];
-      setCategories(updatedCategories);
-      localStorageService.saveCategories(updatedCategories);
-
-      // Add notification for admins
-      const notification = {
-        id: Date.now(),
-        message: `Kategori baru "${formData.name}" telah ditambahkan`,
-        type: 'category_created',
-        isRead: false,
-        createdAt: new Date().toISOString()
-      };
-      const notifications = localStorageService.getNotifications() || [];
-      localStorageService.saveNotifications([...notifications, notification]);
+      const response = await userAPI.postCategories(newCategory);
+       Swal.fire({
+        title: `${response?.status}`,
+        text: `${response?.message}`,
+        icon: response.status == 'success' ? "success":"error"
+      });
+      setTimeout(() => {
+        setFlag((prev) => !prev);
+      }, 1000);
     }
     resetForm();
   };
@@ -77,9 +101,10 @@ const CategoryManagement = () => {
   const handleEdit = (category) => {
     setEditingCategory(category);
     setFormData({
-      name: category.name,
+      id: category.id,
+      name: category.title,
       description: category.description,
-      isActive: category.isActive,
+      isActive: category.isactive,
     });
     setShowModal(true);
   };
@@ -118,25 +143,42 @@ const CategoryManagement = () => {
     }
   };
 
-  const toggleStatus = (categoryId) => {
-    const updatedCategories = categories.map((cat) =>
-      cat.id === categoryId ? { ...cat, isActive: !cat.isActive } : cat
-    );
-    setCategories(updatedCategories);
-    localStorageService.saveCategories(updatedCategories);
+  const toggleStatus = async (categoryId, isActive) => {
+    const result = await Swal.fire({
+        title: `Do you want to ${isActive ? 'Inactive':'active'} this?`,
+        showCancelButton: true,
+        confirmButtonText: "Save"
+      });
+    if (result.isConfirmed) {
+        const result = isActive ? 
+          await userAPI.putCategoriesActive(categoryId)
+          : await userAPI.putCategoriesInactive(categoryId)
+        Swal.fire({
+          title: result.status,
+          text: result.message,
+          icon: result.status == 'success' ? "success":"error"
+        });
+        setTimeout(() => {
+          setFlag((prev) => !prev);
+        }, 1000);
+      } 
+    
+
+    // setCategories(updatedCategories);
+    // localStorageService.saveCategories(updatedCategories);
 
     // Add notification
-    const category = categories.find(cat => cat.id === categoryId);
-    const action = category.isActive ? 'dinonaktifkan' : 'diaktifkan';
-    const notification = {
-      id: Date.now(),
-      message: `Kategori "${category.name}" telah ${action}`,
-      type: 'category_status_changed',
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-    const notifications = localStorageService.getNotifications() || [];
-    localStorageService.saveNotifications([...notifications, notification]);
+    // const category = categories.find(cat => cat.id === categoryId);
+    // const action = category.isActive ? 'dinonaktifkan' : 'diaktifkan';
+    // const notification = {
+    //   id: Date.now(),
+    //   message: `Kategori "${category.name}" telah ${action}`,
+    //   type: 'category_status_changed',
+    //   isRead: false,
+    //   createdAt: new Date().toISOString()
+    // };
+    // const notifications = localStorageService.getNotifications() || [];
+    // localStorageService.saveNotifications([...notifications, notification]);
   };
 
   return (
@@ -184,7 +226,7 @@ const CategoryManagement = () => {
                 <div className="card-body text-center">
                   <i className="fas fa-check-circle fa-2x text-success mb-2"></i>
                   <h3 className="h4 fw-bold mb-1">
-                    {categories.filter((cat) => cat.isActive).length}
+                    {Array.isArray(categories) && categories.filter((cat) => cat.isactive).length}
                   </h3>
                   <small className="text-muted">Kategori Aktif</small>
                 </div>
@@ -195,7 +237,7 @@ const CategoryManagement = () => {
                 <div className="card-body text-center">
                   <i className="fas fa-book fa-2x text-info mb-2"></i>
                   <h3 className="h4 fw-bold mb-1">
-                    {categories.reduce((sum, cat) => sum + cat.courseCount, 0)}
+                    {Array.isArray(categories) && categories.reduce((sum, cat) => sum + parseInt(cat.coursecount), 0)}
                   </h3>
                   <small className="text-muted">Total Kursus</small>
                 </div>
@@ -206,7 +248,7 @@ const CategoryManagement = () => {
                 <div className="card-body text-center">
                   <i className="fas fa-pause-circle fa-2x text-warning mb-2"></i>
                   <h3 className="h4 fw-bold mb-1">
-                    {categories.filter((cat) => !cat.isActive).length}
+                    {Array.isArray(categories) && categories.filter((cat) => !cat.isactive).length}
                   </h3>
                   <small className="text-muted">Kategori Nonaktif</small>
                 </div>
@@ -222,7 +264,7 @@ const CategoryManagement = () => {
                   <thead>
                     <tr>
                       <th>Nama Kategori</th>
-                      <th>Deskripsi</th>
+                      {/* <th>Deskripsi</th> */}
                       <th className="text-center">Jumlah Kursus</th>
                       <th className="text-center">Status</th>
                       <th>Tanggal Dibuat</th>
@@ -230,10 +272,10 @@ const CategoryManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {categories.map((category) => (
+                    {Array.isArray(categories) && categories.map((category) => (
                       <tr key={category.id}>
                         <td>
-                          <div className="fw-bold">{category.name}</div>
+                          <div className="fw-bold">{category.title}</div>
                         </td>
                         <td>
                           <small className="text-muted">
@@ -242,11 +284,11 @@ const CategoryManagement = () => {
                         </td>
                         <td className="text-center">
                           <span className="badge bg-secondary">
-                            {category.courseCount}
+                            {category.coursecount}
                           </span>
                         </td>
                         <td className="text-center">
-                          {category.isActive ? (
+                          {category.isactive ? (
                             <span className="badge bg-success">Aktif</span>
                           ) : (
                             <span className="badge bg-secondary">Nonaktif</span>
@@ -254,9 +296,11 @@ const CategoryManagement = () => {
                         </td>
                         <td>
                           <small className="text-muted">
-                            {new Date(category.createdAt).toLocaleDateString(
-                              "id-ID",
-                            )}
+                            {new Date(category.createdat).toLocaleString("id-ID", {
+                              dateStyle: "full",
+                              timeStyle: "medium",
+                              timeZone: "Asia/Jakarta"
+                            })}
                           </small>
                         </td>
                         <td className="text-center">
@@ -271,15 +315,15 @@ const CategoryManagement = () => {
                             <button
                               onClick={() => toggleStatus(category.id)}
                               className={`btn btn-outline-${
-                                category.isActive ? "warning" : "success"
+                                category.isactive ? "warning" : "success"
                               }`}
                               title={
-                                category.isActive ? "Nonaktifkan" : "Aktifkan"
+                                category.isactive ? "Nonaktifkan" : "Aktifkan"
                               }
                             >
                               <i
                                 className={`fas fa-${
-                                  category.isActive ? "pause" : "play"
+                                  category.isactive ? "pause" : "play"
                                 }`}
                               ></i>
                             </button>

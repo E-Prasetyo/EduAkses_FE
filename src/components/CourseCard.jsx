@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { stripHtml } from "../lib/utils";
+import { useAuth } from "../contexts/AuthContext";
 
 const CourseCard = React.memo(({ course }) => {
+  const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const showImage = course.coverImage || course.thumbnail || course.image;
+
   return (
     <div className="card h-100 border-0 shadow-sm rounded mb-4">
       <div className="position-relative overflow-hidden" style={{ minHeight: "60px" }}>
@@ -56,7 +59,7 @@ const CourseCard = React.memo(({ course }) => {
             >
               <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zM4 18v-4h3v4h2v-7.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5V11h2c.83 0 1.5.67 1.5 1.5V18h2v2H4v-2z" />
             </svg>
-            <span>{course.students ? course.students.toLocaleString() : '0'} siswa</span>
+            <span>{course.learncount ? course.learncount.toLocaleString() : '0'} siswa</span>
           </div>
         </div>
 
@@ -71,13 +74,13 @@ const CourseCard = React.memo(({ course }) => {
             >
               <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z" />
             </svg>
-            <span>{course.duration}</span>
+            <span>{`${Math.floor(course.duration / 3600)} jam`}</span>
           </div>
           <div className="text-muted small">by {course.instructor}</div>
         </div>
 
         <div className="d-flex align-items-center justify-content-between">
-          <div className="hide-price" style={{ display: "none" }}>
+          {/* <div className="hide-price" style={{ display: "none" }}>
             {course.price === "free" ? (
               <span className="h5 mb-0 text-edu-green font-exo fw-bold">
                 GRATIS
@@ -101,7 +104,7 @@ const CourseCard = React.memo(({ course }) => {
                 )}
               </div>
             )}
-          </div>
+          </div> */}
 
           <Link
             to={`/kursus/${course.id}`}

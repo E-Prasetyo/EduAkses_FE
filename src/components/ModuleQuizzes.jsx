@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const ModuleQuizzes = ({ courseId, moduleId, quizzes, moduleIndex, onDeleteQuiz }) => {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const handleDeleteQuiz = (quizId) => {
     if (window.confirm('Yakin ingin menghapus kuis ini?')) {
@@ -30,7 +30,7 @@ const ModuleQuizzes = ({ courseId, moduleId, quizzes, moduleIndex, onDeleteQuiz 
         </Link>
       </div>
       
-      {quizzes && quizzes.length > 0 ? (
+      {/* {quizzes && quizzes.length > 0 ? (
         <div className="list-group">
           {quizzes.map((quiz) => (
             <div
@@ -77,7 +77,18 @@ const ModuleQuizzes = ({ courseId, moduleId, quizzes, moduleIndex, onDeleteQuiz 
             Buat Kuis Pertama
           </Link>
         </div>
-      )}
+      )} */}
+       <div className="text-center py-4 text-muted">
+          <i className="bi bi-journal-x display-6 mb-3"></i>
+          <p className="mb-3">Belum ada kuis untuk modul ini</p>
+          <Link
+            to={`/pengajar/kursus/${courseId}/modul/${moduleId}/quiz/create`}
+            className="btn btn-warning"
+          >
+            <i className="bi bi-plus-lg me-2"></i>
+            Buat Kuis Pertama
+          </Link>
+        </div>e
     </div>
   );
 };

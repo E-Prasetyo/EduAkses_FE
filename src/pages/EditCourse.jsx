@@ -10,6 +10,7 @@ import CreateQuiz from "./CreateQuiz";
 import { courseAPI } from "../services/api";
 import { localStorageService } from "../services/localStorageService";
 import ModuleQuizzes from "../components/ModuleQuizzes";
+import { userAPI } from "../services/userAPI";
 
 // Helper function to extract YouTube video ID from URL
 const extractYouTubeVideoId = (url) => {
@@ -55,16 +56,16 @@ const EditCourse = () => {
   }, [user]);
 
   const [courseData, setCourseData] = useState({
-    title: "",
-    description: "",
-    category: "Teknologi",
-    coverImage: null,
-    level: "Pemula",
-    duration: "",
-    price: "free",
-    customPrice: "",
-    status: "DRAFT",
-    modules: []
+    // title: "",
+    // description: "",
+    // category: "Teknologi",
+    // coverImage: null,
+    // level: "Pemula",
+    // duration: "",
+    // price: "free",
+    // customPrice: "",
+    // status: "DRAFT",
+    // modules: []
   });
 
   const [modules, setModules] = useState([]);
@@ -133,19 +134,22 @@ const EditCourse = () => {
     );
   };
 
-  const [categories, setCategories] = useState([
-    "Teknologi",
-    "Seni & Desain",
-    "Bisnis",
-    "Literasi & Kewirausahaan",
-    "Pengembangan Diri",
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [levels, setLevels] = useState([]);
 
   useEffect(() => {
-    const storedCategories = localStorageService.getCategories();
-    if (storedCategories && storedCategories.length > 0) {
-      setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    // const storedCategories = localStorageService.getCategories();
+    // if (storedCategories && storedCategories.length > 0) {
+    //   setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    // }
+    const fetchCategories = async () => {
+      const fetchCategories = await userAPI.getCategories();
+      setCategories(fetchCategories.data.categories);
+      const fetchLevel = await userAPI.getLevels();
+      setLevels(fetchLevel.data.levels);
     }
+
+    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -153,20 +157,23 @@ const EditCourse = () => {
       try {
         setLoading(true);
         setError(null);
-        // Cek apakah ada draft yang tersimpan
-        const savedDraft = localStorageService.getDraft(courseId);
-        if (savedDraft) {
-          setCourseData(savedDraft);
-          setModules(savedDraft.modules || []);
-          setIsDataLoaded(true);
-          setLoading(false);
-          return;
-        }
+        // // Cek apakah ada draft yang tersimpan
+        // const savedDraft = localStorageService.getDraft(courseId);
+        // if (savedDraft) {
+        //   setCourseData(savedDraft);
+        //   setModules(savedDraft.modules || []);
+        //   setIsDataLoaded(true);
+        //   setLoading(false);
+        //   return;
+        // }
         // Ambil data course dari localStorage utama
-        const foundCourse = localStorageService.getCourseById(courseId);
+        // const foundCourse = localStorageService.getCourseById(courseId);
+
+        const foundCourse = await courseAPI.getCourseDetail(courseId);
+     
         if (foundCourse) {
-          setCourseData(foundCourse);
-          setModules(foundCourse.modules || []);
+          setCourseData(foundCourse.data.content);
+          setModules(foundCourse.data.content.materials || []);
           setIsDataLoaded(true);
           setLoading(false);
           return;
@@ -494,9 +501,9 @@ const EditCourse = () => {
                         className="form-select h-12"
                       >
                         <option value="">Pilih kategori</option>
-                        {categories.map((category) => (
-                          <option key={category} value={category}>
-                            {category}
+                        {Array.isArray(categories) && categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.title}
                           </option>
                         ))}
                       </select>
@@ -509,13 +516,16 @@ const EditCourse = () => {
                         onChange={handleInputChange}
                         className="form-select h-12"
                       >
-                        <option value="Pemula">Pemula</option>
-                        <option value="Menengah">Menengah</option>
-                        <option value="Lanjutan">Lanjutan</option>
+                        <option value="">Pilih level</option>
+                        {Array.isArray(levels) && levels.map((level) => (
+                          <option key={level.id} value={level.id}>
+                            {level.title}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="mb-3">
-                      <label className="form-label fw-medium">Estimasi Durasi</label>
+                      <label className="form-label fw-medium">Estimasi Durasi (detik)</label>
                       <input
                         type="text"
                         name="duration"
@@ -525,7 +535,7 @@ const EditCourse = () => {
                         placeholder="Contoh: 8 Jam"
                       />
                     </div>
-                    <div className="mb-3">
+                    {/* <div className="mb-3">
                       <label className="form-label fw-medium">Tipe Kursus</label>
                       <select
                         name="price"
@@ -536,7 +546,7 @@ const EditCourse = () => {
                         <option value="free">Gratis</option>
                         <option value="paid">Berbayar</option>
                       </select>
-                    </div>
+                    </div> */}
                     <div className="mb-3">
                       <label className="form-label fw-medium">Deskripsi Kursus *</label>
                       {isDataLoaded ? (
@@ -658,7 +668,7 @@ const EditCourse = () => {
                         + Tambah Modul
                       </button>
                     </div>
-                    {modules.map((module, moduleIndex) => (
+                    {Array.isArray(modules) && modules.map((module, moduleIndex) => (
                       <div key={module.id} className="border rounded p-3 mb-3">
                         <div className="mb-3">
                           <label className="form-label fw-medium">Judul Modul</label>
@@ -683,145 +693,7 @@ const EditCourse = () => {
                             rows="2"
                           />
                         </div>
-                        <div className="mb-3">
-                          <div className="d-flex justify-content-between align-items-center mb-3">
-                            <label className="form-label fw-medium mb-0">Pelajaran</label>
-                            <button
-                              type="button"
-                              onClick={() => addLesson(moduleIndex)}
-                              className="btn btn-outline-primary btn-sm"
-                            >
-                              + Tambah Pelajaran
-                            </button>
-                          </div>
-                          {module.lessons.map((lesson, lessonIndex) => (
-                            <div key={lesson.id} className="border rounded p-3 mb-2">
-                              <div className="mb-3">
-                                <label className="form-label">Judul Pelajaran</label>
-                                <input
-                                  type="text"
-                                  value={lesson.title}
-                                  onChange={(e) =>
-                                    updateLesson(
-                                      moduleIndex,
-                                      lessonIndex,
-                                      "title",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                  placeholder="Contoh: Apa itu JavaScript?"
-                                />
-                              </div>
-                              <div className="mb-3">
-                                <label className="form-label">Tipe Konten</label>
-                                <select
-                                  value={lesson.type}
-                                  onChange={(e) =>
-                                    updateLesson(
-                                      moduleIndex,
-                                      lessonIndex,
-                                      "type",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-select"
-                                >
-                                  <option value="text">Teks</option>
-                                  <option value="video">Video</option>
-                                </select>
-                              </div>
-                              {lesson.type === "text" ? (
-                                <div className="mb-3">
-                                  <label className="form-label">Konten</label>
-                                  <Editor
-                                    tinymceScriptSrc="/tinymce/tinymce.min.js"
-                                    value={lesson.textContent}
-                                    onEditorChange={(content) =>
-                                      updateLesson(
-                                        moduleIndex,
-                                        lessonIndex,
-                                        "textContent",
-                                        content
-                                      )
-                                    }
-                                    init={{
-                                      height: 200,
-                                      menubar: false,
-                                      readonly: false,
-                                      plugins: [
-                                        "advlist autolink lists link image charmap print preview anchor",
-                                        "searchreplace visualblocks code fullscreen",
-                                        "insertdatetime media table paste code help wordcount",
-                                      ],
-                                      toolbar:
-                                        "undo redo | formatselect | bold italic backcolor | \
-                                        alignleft aligncenter alignright alignjustify | \
-                                        bullist numlist outdent indent | removeformat | help",
-                                      setup: (editor) => {
-                                        editor.on('init', () => {
-                                          if (editor.mode.get() === 'readonly') {
-                                            console.warn('Editor initialized in readonly mode');
-                                            editor.mode.set('design');
-                                          }
-                                        });
-                                      },
-                                      branding: false,
-                                      statusbar: true,
-                                      content_style: "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; }"
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="mb-3">
-                                  <label className="form-label">URL Video</label>
-                                  <input
-                                    type="text"
-                                    value={lesson.videoUrl}
-                                    onChange={(e) =>
-                                      updateLesson(
-                                        moduleIndex,
-                                        lessonIndex,
-                                        "videoUrl",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="form-control"
-                                    placeholder="Masukkan URL atau ID video YouTube"
-                                  />
-                                 {/* Preview embed jika ID valid */}
-                                 {lesson.videoUrl && extractYouTubeVideoId(lesson.videoUrl) && (
-                                   <div className="mt-2 ratio ratio-16x9">
-                                     <iframe
-                                       src={`https://www.youtube.com/embed/${extractYouTubeVideoId(lesson.videoUrl)}`}
-                                       title="YouTube video preview"
-                                       allowFullScreen
-                                     ></iframe>
-                                   </div>
-                                 )}
-                                </div>
-                              )}
-                              <div className="mb-3">
-                                <label className="form-label">Durasi</label>
-                                <input
-                                  type="text"
-                                  value={lesson.duration}
-                                  onChange={(e) =>
-                                    updateLesson(
-                                      moduleIndex,
-                                      lessonIndex,
-                                      "duration",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="form-control"
-                                  placeholder="Contoh: 10 menit"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
+                       
                         {/* Quiz Section */}
                         <ModuleQuizzes 
                           courseId={courseId}
@@ -845,92 +717,6 @@ const EditCourse = () => {
                 </div>
               </form>
             </div>
-
-            {/* Sidebar */}
-            {/* HAPUS BAGIAN INI: Sidebar Gambar Sampul */}
-            {/* <div className="col-lg-4">
-              <div className="card border-0 shadow-sm">
-                <div className="card-body">
-                  <h5 className="card-title mb-4 font-exo fw-semibold">
-                    Gambar Sampul
-                  </h5>
-                  <div className="border border-0 shadow-sm">
-                    <div className="card-body">
-                      <h5 className="card-title mb-4 font-exo fw-semibold">
-                        Gambar Sampul
-                      </h5>
-                      <div className="border border-2 border-dashed border-secondary rounded p-4 text-center">
-                        {courseData.coverImage ? (
-                          <div>
-                            <img
-                              src={courseData.coverImage}
-                              alt="Preview"
-                              className="img-fluid rounded mb-3"
-                              style={{ height: "200px", objectFit: "cover" }}
-                              onError={(e) => {
-                                console.error('Error loading image:', e);
-                                e.target.style.display = 'none';
-                                alert('Gagal memuat gambar. Silakan upload ulang.');
-                              }}
-                            />
-                            <div className="d-flex gap-2 justify-content-center">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setCourseData({ ...courseData, coverImage: null, thumbnail: null, image: null })
-                                }
-                                className="btn btn-danger btn-sm"
-                              >
-                                Hapus Gambar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => document.getElementById('coverImage').click()}
-                                className="btn btn-outline-primary btn-sm"
-                              >
-                                Ganti Gambar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <svg
-                              width="48"
-                              height="48"
-                              viewBox="0 0 48 48"
-                              fill="none"
-                              className="text-muted mb-3"
-                            >
-                              <path
-                                d="M24 4V44M4 24H44"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              />
-                            </svg>
-                            <p className="text-muted mb-3">
-                              Drag & drop gambar atau klik untuk upload
-                            </p>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="d-none"
-                              id="coverImage"
-                            />
-                            <label
-                              htmlFor="coverImage"
-                              className="btn btn-primary"
-                            >
-                              Pilih Gambar
-                            </label>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div> */}
           </div>
         </div>
         {showQuizModal && (

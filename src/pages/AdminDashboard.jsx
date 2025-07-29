@@ -5,6 +5,9 @@ import Header from "../components/Header";
 import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
 import { stripHtml } from "../lib/utils";
+import { courseAPI } from "../services/api";
+import { userAPI } from "../services/userAPI";
+import Swal from "sweetalert2";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -24,51 +27,56 @@ const AdminDashboard = () => {
     pendingReviews: 0
   });
   const [notifications, setNotifications] = useState([]);
+  const [trigger, setTrigger] = useState(false);
 
-  const loadDashboardData = () => {
+  const loadDashboardData = async () => {
     // Load all data from localStorage
     const allCourses = localStorageService.getCourses() || [];
-    const allUsers = localStorageService.getUsers();
+    // const allUsers = localStorageService.getUsers();
     const allEnrollments = localStorageService.getEnrollments() || [];
-    const allNotifications = localStorageService.getNotifications() || [];
-
-    //API
-    // const pendingCourse = 
+    // const allNotifications = localStorageService.getNotifications() || [];
 
     // Filter pending courses (menunggu review)
-    const pending = allCourses.filter(course => course.status === 'PENDING_REVIEW');
-    setPendingCourses(pending);
+    // const pending = allCourses.filter(course => course.status === 'PENDING_REVIEW');
+    const pending = await courseAPI.getAllCoursesPending();
+    setPendingCourses(pending.data.content);
 
     // Filter published courses
-    const published = allCourses.filter(course => course.status === 'PUBLISHED');
-    setApprovedCourses(published);
+    // const published = allCourses.filter(course => course.status === 'PUBLISHED');
+    const published = await courseAPI.getAllCoursesPublish();
+    setApprovedCourses(published.data.content);
 
     // Filter rejected courses
-    const rejected = allCourses.filter(course => course.status === 'REJECTED');
-    setRejectedCourses(rejected);
+    // const rejected = allCourses.filter(course => course.status === 'REJECTED');
+    const rejected = await courseAPI.getAllCoursesReject();
+    setRejectedCourses(rejected.data.content);
 
     // Filter teachers
-    const allTeachers = allUsers.filter(user => user.role === 'teacher');
-    setTeachers(allTeachers);
+    // const allTeachers = allUsers.filter(user => user.role === 'teacher');
+    const allTeachers = await  userAPI.getAllTeachers();
+    setTeachers(allTeachers.data.users);
 
     // Filter categories
-    const allCategories = localStorageService.getCategories();
-    setCategories(allCategories);
+    // const allCategories = localStorageService.getCategories();
+    const allCategories = await userAPI.getCategories();
+    setCategories(allCategories.data);
 
     // Filter pending teachers
-    const pendingTeachers = allUsers.filter(user => user.role === 'teacher' && user.status === 'pending');
-    setPendingTeachers(pendingTeachers);
+    // const pendingTeachers = allUsers.filter(user => user.role === 'teacher' && user.status === 'pending');
+    const pendingTeachers = await userAPI.getAllTeachersPending();
+    setPendingTeachers(pendingTeachers.data.users);
 
     // Filter active teachers
-    const activeTeachers = allUsers.filter(user => user.role === 'teacher' && user.status === 'active');
-    setActiveTeachers(activeTeachers);
+    const activeTeachers = await userAPI.getAllTeachersActive();
+    setActiveTeachers(activeTeachers.data.users);
 
     // Filter students
-    const allStudents = allUsers.filter(user => user.role === 'student');
-    setStudents(allStudents);
+    // const allStudents = allUsers.filter(user => user.role === 'student');
+    const allStudents = await userAPI.getAllStudents();
+    setStudents(allStudents.data.users);
 
     // Calculate statistics
-    const totalStudents = allUsers.filter(user => user.role === 'student').length;
+    const totalStudents = allStudents.length;
     const totalRevenue = allEnrollments.reduce((sum, enrollment) => {
       const course = allCourses.find(c => c.id === enrollment.courseId);
       return sum + (course?.price || 0);
@@ -86,174 +94,143 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [trigger]);
 
-  const handleCourseAction = (courseId, action, reason = "") => {
-    const course = pendingCourses.find((c) => c.id === courseId);
-    if (!course) return;
+  // const handleCourseAction = (courseId, action, reason = "") => {
+  //   const course = pendingCourses.find((c) => c.id === courseId);
+  //   if (!course) return;
 
-    const currentDate = new Date().toISOString();
-    const updatedCourse = {
-      ...course,
-      status: action === "PUBLISHED" ? "PUBLISHED" : "REJECTED",
-      lastUpdated: currentDate,
-      ...(action === "PUBLISHED" && {
-        approvedDate: currentDate.split("T")[0],
-        students: course.students || 0,
-        rating: course.rating || 0,
-        image: course.coverImage || course.thumbnail || course.image || '',
-        thumbnail: course.coverImage || course.thumbnail || '',
-        overview: course.overview || course.description?.substring(0, 200) + '...' || '',
-        whatYouLearn: course.whatYouLearn || []
-      }),
-      ...(action === "REJECTED" && {
-        rejectedDate: currentDate.split("T")[0],
-        reason: reason || "Tidak memenuhi standar kualitas"
-      })
-    };
+  //   const currentDate = new Date().toISOString();
+  //   const updatedCourse = {
+  //     ...course,
+  //     status: action === "PUBLISHED" ? "PUBLISHED" : "REJECTED",
+  //     lastUpdated: currentDate,
+  //     ...(action === "PUBLISHED" && {
+  //       approvedDate: currentDate.split("T")[0],
+  //       students: course.students || 0,
+  //       rating: course.rating || 0,
+  //       image: course.coverImage || course.thumbnail || course.image || '',
+  //       thumbnail: course.coverImage || course.thumbnail || '',
+  //       overview: course.overview || course.description?.substring(0, 200) + '...' || '',
+  //       whatYouLearn: course.whatYouLearn || []
+  //     }),
+  //     ...(action === "REJECTED" && {
+  //       rejectedDate: currentDate.split("T")[0],
+  //       reason: reason || "Tidak memenuhi standar kualitas"
+  //     })
+  //   };
 
-    // Get all courses and update the specific course
-    const allCourses = localStorageService.getCourses() || [];
-    const updatedCourses = allCourses.map(c => 
-      c.id === courseId ? updatedCourse : c
-    );
+  //   // Get all courses and update the specific course
+  //   const allCourses = localStorageService.getCourses() || [];
+  //   const updatedCourses = allCourses.map(c => 
+  //     c.id === courseId ? updatedCourse : c
+  //   );
 
-    // Save updated courses to localStorage
-    localStorageService.saveCourses(updatedCourses);
+  //   // Save updated courses to localStorage
+  //   localStorageService.saveCourses(updatedCourses);
 
-    // Create notification for course owner
-    const notification = {
-      id: Date.now(),
-      userId: course.teacherId,
-      courseId: course.id,
-      message: action === "PUBLISHED"
-        ? `Kursus "${course.title}" telah disetujui dan dipublikasikan`
-        : `Kursus "${course.title}" ditolak dengan alasan: ${reason}`,
-      type: action === "PUBLISHED" ? 'course_approved' : 'course_rejected',
-      isRead: false,
-      createdAt: currentDate
-    };
+  //   // Create notification for course owner
+  //   const notification = {
+  //     id: Date.now(),
+  //     userId: course.teacherId,
+  //     courseId: course.id,
+  //     message: action === "PUBLISHED"
+  //       ? `Kursus "${course.title}" telah disetujui dan dipublikasikan`
+  //       : `Kursus "${course.title}" ditolak dengan alasan: ${reason}`,
+  //     type: action === "PUBLISHED" ? 'course_approved' : 'course_rejected',
+  //     isRead: false,
+  //     createdAt: currentDate
+  //   };
 
-    const notifications = localStorageService.getNotifications() || [];
-    localStorageService.saveNotifications([...notifications, notification]);
+  //   const notifications = localStorageService.getNotifications() || [];
+  //   localStorageService.saveNotifications([...notifications, notification]);
 
-    // Reload dashboard data
-    loadDashboardData();
-  };
+  //   // Reload dashboard data
+  //   loadDashboardData();
+  // };
 
-  const handleTeacherApproval = (teacherId, isApproved) => {
-    const users = localStorageService.getUsers();
-    const updatedUsers = users.map(user => {
-      if (user.id === teacherId) {
-        return {
-          ...user,
-          status: isApproved ? 'active' : 'pending'
-        };
-      }
-      return user;
+  const handleTeacherApproval = async(teacherId, flag) => {
+      const result = await Swal.fire({
+      title: "Do you want to approve this?",
+      showCancelButton: true,
+      confirmButtonText: "Save"
     });
+    if (result.isConfirmed) {
 
-    // Update users in localStorage
-    localStorageService.saveUsers(updatedUsers);
-
-    // Update state
-    const updatedTeacher = updatedUsers.find(user => user.id === teacherId);
-    setPendingTeachers(prev => prev.filter(teacher => teacher.id !== teacherId));
-    if (isApproved) {
-      setActiveTeachers(prev => [...prev, updatedTeacher]);
-    }
-
-    // Create notification for teacher
-    const notification = {
-      id: Date.now(),
-      userId: teacherId,
-      message: isApproved
-        ? 'Selamat! Akun pengajar Anda telah disetujui. Anda sekarang dapat membuat dan mengelola kursus.'
-        : 'Maaf, akun pengajar Anda telah dinonaktifkan. Silakan hubungi admin untuk informasi lebih lanjut.',
-      type: isApproved ? 'teacher_approved' : 'teacher_rejected',
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-
-    const notifications = localStorageService.getNotifications() || [];
-    localStorageService.saveNotifications([...notifications, notification]);
-  };
-
-  const handleToggleTeacherStatus = (teacherId) => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    if (!teacher) return;
-
-    console.log('Toggle teacher status:', { teacherId, currentStatus: teacher.status, teacherName: teacher.name });
-
-    const newStatus = teacher.status === 'active' ? 'pending' : 'active';
-    const statusText = newStatus === 'active' ? 'mengaktifkan' : 'menonaktifkan';
-    
-    if (window.confirm(`Apakah Anda yakin ingin ${statusText} pengajar "${teacher.name}"?`)) {
-      try {
-        const users = localStorageService.getUsers();
-        const updatedUsers = users.map(user => {
-          if (user.id === teacherId) {
-            return {
-              ...user,
-              status: newStatus
-            };
-          }
-          return user;
-        });
-
-        console.log('Updated users:', updatedUsers.filter(u => u.id === teacherId));
-
-        // Update users in localStorage
-        localStorageService.saveUsers(updatedUsers);
-
-        // Update state immediately
-        const updatedTeacher = updatedUsers.find(user => user.id === teacherId);
-        setTeachers(prev => prev.map(t => t.id === teacherId ? updatedTeacher : t));
+      const result = flag ?
+        await userAPI.approveTeacher(teacherId)
+        : await userAPI.rejectTeacher(teacherId);
         
-        // Update pending and active teachers lists
-        if (newStatus === 'active') {
-          setPendingTeachers(prev => prev.filter(t => t.id !== teacherId));
-          setActiveTeachers(prev => [...prev, updatedTeacher]);
-        } else {
-          setActiveTeachers(prev => prev.filter(t => t.id !== teacherId));
-          setPendingTeachers(prev => [...prev, updatedTeacher]);
-        }
-
-        // Create notification for teacher
-        const notification = {
-          id: Date.now(),
-          userId: teacherId,
-          message: newStatus === 'active'
-            ? 'Selamat! Akun pengajar Anda telah diaktifkan kembali. Anda sekarang dapat membuat dan mengelola kursus.'
-            : 'Akun pengajar Anda telah dinonaktifkan. Anda tidak dapat membuat atau mengelola kursus untuk sementara.',
-          type: newStatus === 'active' ? 'teacher_activated' : 'teacher_deactivated',
-          isRead: false,
-          createdAt: new Date().toISOString()
-        };
-
-        const notifications = localStorageService.getNotifications() || [];
-        localStorageService.saveNotifications([...notifications, notification]);
-        
-        console.log('Teacher status updated successfully:', { teacherId, newStatus });
-        alert(`Pengajar "${teacher.name}" berhasil ${statusText === 'mengaktifkan' ? 'diaktifkan' : 'dinonaktifkan'}!`);
-      } catch (error) {
-        console.error('Error toggling teacher status:', error);
-        alert('❌ Terjadi kesalahan saat mengubah status pengajar. Silakan coba lagi.');
-      }
+      Swal.fire({
+        title: result.status,
+        text: result.message,
+        icon: "success"
+      });
+      setTimeout(() => {
+        setTrigger((prev) => !prev);
+      }, 1000);
     }
   };
 
-  const handleApprove = (courseId) => {
-    if (window.confirm("Apakah Anda yakin ingin menyetujui kursus ini?")) {
-      handleCourseAction(courseId, "PUBLISHED");
+  const handleToggleTeacherStatus = async(teacherId, status) => {
+     const result = await Swal.fire({
+      title: "Do you want to approve this?",
+      showCancelButton: true,
+      confirmButtonText: "Save"
+    });
+    if (result.isConfirmed) {
+      // handleCourseAction(courseId, "PUBLISHED");
+      const result = status != 'active' ?
+        await userAPI.approveTeacher(teacherId)
+        : await userAPI.inactiveTeacher(teacherId);
+      
+      Swal.fire({
+        title: result.status,
+        text: result.message,
+        icon: result.status == "success" ? "success" : "error"
+      });
+      setTrigger((prev) => !prev);
     }
   };
 
-  const handleReject = (courseId) => {
-    const reason = prompt("Masukkan alasan penolakan:");
-    if (reason) {
-      handleCourseAction(courseId, "REJECTED", reason);
+  const handleApprove = async (courseId) => {
+    const result = await Swal.fire({
+      title: "Do you want to approve this?",
+      showCancelButton: true,
+      confirmButtonText: "Save"
+    });
+    if (result.isConfirmed) {
+      // handleCourseAction(courseId, "PUBLISHED");
+      const result = await courseAPI.approveCourse(courseId);
+      Swal.fire({
+        title: result.status,
+        text: result.message,
+        icon: "success"
+      });
+      setTrigger((prev) => !prev);
     }
+  };
+
+  const handleReject = async (courseId) => {
+    const result = await Swal.fire({
+      input: "text",
+      title: "Do you want to approve this?",
+      showCancelButton: true,
+      confirmButtonText: "Save"
+    });
+    if (result.isConfirmed) {
+      const resultAPI = await courseAPI.rejectCourse(courseId, result.value);
+      Swal.fire({
+        title: resultAPI.status,
+        text: resultAPI.message,
+        icon: "success"
+      });
+      setTrigger((prev) => !prev);
+    }
+    // const reason = prompt("Masukkan alasan penolakan:");
+    // if (reason) {
+    //    handleCourseAction(courseId, "REJECTED", reason);
+    // }
   };
 
   const handleEditCourse = (courseId) => {
@@ -606,7 +583,7 @@ const AdminDashboard = () => {
                         <div className="row g-0 h-100">
                           <div className="col-md-4">
                             <img
-                              src={course.thumbnail}
+                              src={course.image}
                               alt={course.title}
                               className="img-fluid rounded-start h-100"
                               style={{ objectFit: "cover" }}
@@ -644,31 +621,33 @@ const AdminDashboard = () => {
                                       Durasi
                                     </small>
                                     <small className="fw-medium">
-                                      {course.duration}
+                                      {`${Math.floor(course.duration / 3600)} jam`}
                                     </small>
                                   </div>
-                                  <div className="col-6">
+                                  {/* <div className="col-6">
                                     <small className="text-muted d-block">
                                       Modul
                                     </small>
                                     <small className="fw-medium">
                                       {course.modules?.length || 0} modul
                                     </small>
-                                  </div>
-                                  <div className="col-6">
+                                  </div> */}
+                                  {/* <div className="col-6">
                                     <small className="text-muted d-block">
                                       Pelajaran
                                     </small>
                                     <small className="fw-medium">
                                       {course.modules?.reduce((total, module) => total + (module.lessons?.length || 0), 0)} pelajaran
                                     </small>
-                                  </div>
+                                  </div> */}
                                 </div>
                                 <small className="text-muted">
                                   Diajukan:{" "}
-                                  {new Date(
-                                    course.submittedDate,
-                                  ).toLocaleDateString("id-ID")}
+                                  {new Date(course.submitteddate).toLocaleString("id-ID", {
+                                    dateStyle: "full",
+                                    timeStyle: "medium",
+                                    timeZone: "Asia/Jakarta"
+                                  })}
                                 </small>
                               </div>
                               <div className="d-flex gap-2 mt-3">
@@ -757,20 +736,22 @@ const AdminDashboard = () => {
                             </td>
                             <td className="text-center">
                               <span className="badge bg-success">
-                                {course.students}
+                                {course.learncount}
                               </span>
                             </td>
-                            <td className="text-center">
+                            {/* <td className="text-center">
                               <span className="badge bg-warning">
                                 <i className="fas fa-star me-1"></i>
                                 {course.rating || "N/A"}
                               </span>
-                            </td>
+                            </td> */}
                             <td>
                               <small className="text-muted">
-                                {new Date(
-                                  course.approvedDate,
-                                ).toLocaleDateString("id-ID")}
+                                {new Date(course.updatedat).toLocaleString("id-ID", {
+                                    dateStyle: "full",
+                                    timeStyle: "medium",
+                                    timeZone: "Asia/Jakarta"
+                                })}
                               </small>
                             </td>
                             <td className="text-center">
@@ -825,7 +806,7 @@ const AdminDashboard = () => {
                             </td>
                             <td>
                               <small className="text-danger">
-                                {course.reason}
+                                {course.remark}
                               </small>
                             </td>
                             <td>
@@ -917,7 +898,7 @@ const AdminDashboard = () => {
                                         justifyContent: "center",
                                       }}
                                     >
-                                      {teacher.name.charAt(0).toUpperCase()}
+                                      {teacher.fullname.charAt(0).toUpperCase()}
                                     </div>
                                   )}
                                   <div className="fw-bold">{teacher.name}</div>
@@ -926,7 +907,11 @@ const AdminDashboard = () => {
                               <td>{teacher.email}</td>
                               <td>
                                 <small className="text-muted">
-                                  {new Date(teacher.createdAt).toLocaleDateString("id-ID")}
+                                  {new Date(teacher.createdat).toLocaleString("id-ID", {
+                                    dateStyle: "full",
+                                    timeStyle: "medium",
+                                    timeZone: "Asia/Jakarta"
+                                })}
                                 </small>
                               </td>
                               <td className="text-center">
@@ -1069,7 +1054,7 @@ const AdminDashboard = () => {
                                           justifyContent: "center",
                                         }}
                                       >
-                                        {teacher.name.charAt(0).toUpperCase()}
+                                        {teacher.fullname.charAt(0).toUpperCase()}
                                       </div>
                                     )}
                                     <div>
@@ -1111,7 +1096,7 @@ const AdminDashboard = () => {
                                 <td className="text-center">
                                   <div className="d-flex gap-2 justify-content-center">
                                     <button
-                                      onClick={() => handleToggleTeacherStatus(teacher.id)}
+                                      onClick={() => handleToggleTeacherStatus(teacher.id, teacher.status)}
                                       className={`btn btn-sm ${teacher.status === 'active' ? 'btn-warning' : 'btn-success'}`}
                                       title={teacher.status === 'active' ? 'Nonaktifkan Pengajar (Tidak bisa membuat kursus)' : 'Aktifkan Pengajar (Bisa membuat kursus)'}
                                     >
@@ -1235,7 +1220,7 @@ const AdminDashboard = () => {
                                           justifyContent: "center",
                                         }}
                                       >
-                                        {student.name.charAt(0).toUpperCase()}
+                                        {student.fullname.charAt(0).toUpperCase()}
                                       </div>
                                     )}
                                     <div>

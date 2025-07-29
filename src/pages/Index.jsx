@@ -31,17 +31,6 @@ const Index = () => {
     };
 
     fetchCourses();
-    // courseAPI.getAllCourses()
-    //   .then((res) => {
-    //     // console.log("Role result:", res.data);
-    //     setFeaturedCourses(res.data);
-    //     setIsLoading(true);
-    //   })
-    //   .catch((err) => {
-    //     console.error("Gagal ambil course:", err);
-    //     setFeaturedCourses([]);
-    //     setIsLoading(false);
-    // });
 
     // Add event listener for storage changes
     // window.addEventListener("storage", fetchCourses);
@@ -85,7 +74,6 @@ const Index = () => {
     },
   ];
 
-console.log(featuredCourses)
   return (
     <div className="d-flex flex-column min-vh-100">
       {/* Hero Section */}
@@ -186,7 +174,6 @@ console.log(featuredCourses)
           <div className="row g-4">
             {Array.isArray(featuredCourses) && featuredCourses.map((course) => (
               <div key={course.id} className="col-lg-4 col-md-6">
-                <p>{course.fullname}</p>
                 <CourseCard course={course} />
               </div>
             ))}
@@ -197,7 +184,7 @@ console.log(featuredCourses)
                       aria-hidden="true"
                     ></span>
                   ) : null}
-            {isLoading ? "Sedang mencari data..." : "Data Kosong"}
+            {isLoading ? "Sedang mencari data..." : ""}
           </div>
 
           <div className="text-center mt-5">

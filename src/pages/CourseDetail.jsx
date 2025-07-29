@@ -4,6 +4,7 @@ import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
 import { stripHtml } from "../lib/utils";
+import { courseAPI } from "../services/api";
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -66,15 +67,16 @@ const CourseDetail = () => {
 
   // Fetch course data from localStorage
   useEffect(() => {
-    const fetchCourse = () => {
+    const fetchCourse = async() => {
       setIsLoading(true);
       try {
-        const foundCourse = localStorageService.getCourseById(id);
+        // const foundCourse = localStorageService.getCourseById(id);
+        const foundCourse = await courseAPI.getCourse(id)
         if (!foundCourse) {
           navigate("/not-found");
           return;
         }
-        const processedCourse = ensureCourseData(foundCourse);
+        const processedCourse = ensureCourseData(foundCourse.data.content);
         setCourse(processedCourse);
         setEditedCourse(processedCourse);
         // Check if user is enrolled
@@ -129,7 +131,7 @@ const CourseDetail = () => {
       <main className="container my-5">
         <div className="row">
           <div className="col-lg-8">
-            {canManageCourse() && (
+            {/* {canManageCourse() && (
               <div className="mb-4">
                 {isEditing ? (
                   <div className="d-flex gap-2">
@@ -151,7 +153,7 @@ const CourseDetail = () => {
                   </div>
                 )}
               </div>
-            )}
+            )} */}
 
             <h1 className="mb-4">{course.title}</h1>
             <div className="card mb-4">
@@ -187,7 +189,7 @@ const CourseDetail = () => {
                   <h5>Course Details</h5>
                   <ul className="list-unstyled">
                     <li>Level: {course.level}</li>
-                    <li>Duration: {course.duration}</li>
+                    <li>Duration: {Math.floor(course.duration / 3600)} jam</li>
                     <li>Category: {course.category}</li>
                     <li>Students Enrolled: {course.students}</li>
                   </ul>

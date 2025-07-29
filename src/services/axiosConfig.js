@@ -2,13 +2,15 @@ import axios from 'axios';
 
 // Gunakan URL API lokal untuk development dengan localStorage
 const baseURL = 'https://developerprz.xyz';
+// const baseURL = 'http://localhost:5000';
+// 
 
 const axiosInstance = axios.create({
   baseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Accept': 'application/json'
   }
 });
 

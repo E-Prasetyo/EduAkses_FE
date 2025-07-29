@@ -33,7 +33,7 @@ const Profile = () => {
       // Pastikan role tidak berubah ke string display
       const formData = new FormData();
       formData.append('fullname', editData.name);
-      formData.append('description', editData.name);
+      formData.append('description', editData.bio);
       formData.append('image', editData.avatar);
 
       

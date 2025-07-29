@@ -40,6 +40,36 @@ export const courseAPI = {
       return handleError(error);
     }
   },
+
+  // Fetch all courses Pending
+  getAllCoursesPending: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/contents/pending`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // Fetch all courses Publish
+  getAllCoursesPublish: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/contents/publish`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // Fetch all courses Reject
+  getAllCoursesReject: async () => {
+    try {
+      const response = await axiosInstance.get(`/api/contents/reject `);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
   
   // Fetch course by ID or slug
   getCourse: async (courseId) => {
@@ -49,7 +79,27 @@ export const courseAPI = {
     }
 
     try {
-      const response = await axiosInstance.get(`/courses/${courseId}`);
+      const response = await axiosInstance.get(`/api/contents/${courseId}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  // Fetch course by ID or slug
+  getCourseDetail: async (courseId) => {
+    if (!courseId) {
+      console.error('CourseId is required');
+      return null;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axiosInstance.get(`/api/contents/${courseId}/materials`,{
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -116,6 +166,26 @@ export const courseAPI = {
   deleteQuiz: async (courseId, moduleId, quizId) => {
     try {
       const response = await axiosInstance.delete(`/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  approveCourse: async (courseId) => {
+    try {
+      const response = await axiosInstance.put(`/api/contents/${courseId}/publish`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  rejectCourse: async (courseId, remark) => {
+    try {
+      const response = await axiosInstance.put(`/api/contents/${courseId}/reject`, {
+        remark: remark
+      });
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
