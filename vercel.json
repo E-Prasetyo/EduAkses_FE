@@ -3,6 +3,7 @@
     {
       "source": "/api/(.*)",
       "destination": "https://developerprz.xyz/api/"
-    }
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
