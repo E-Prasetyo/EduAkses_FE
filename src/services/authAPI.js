@@ -92,7 +92,8 @@ export const authAPI = {
   // Logout user
   logout: async () => {
     try {
-      const response = await axiosInstance.post('/auth/logout');
+      const response = await axiosInstance.post('/api/authentications');
+      localStorage.removeItem('token');
       return handleResponse(response);
     } catch (error) {
       // Untuk logout, kita tidak perlu fallback karena logout bisa dilakukan secara lokal
