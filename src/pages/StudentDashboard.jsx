@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
+import { enrollmentAPI } from "../services/enrollmentAPI";
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -12,12 +13,20 @@ const StudentDashboard = () => {
   const [courses, setCourses] = useState([]);
   const [progress, setProgress] = useState([]);
 
+  const fetchData = async() => {
+    const result = await enrollmentAPI.getUserEnrollments();
+    setEnrolledCourses(result.data.result)
+  }
+
   useEffect(() => {
     if (!user) return;
     // Load all data from localStorage
     const allCourses = localStorageService.getCourses() || [];
     const enrollments = localStorageService.getUserEnrollments(user.id) || [];
     const allProgress = localStorageService.getProgress() || [];
+
+    fetchData();
+
     // Get enrolled courses with details
     const studentCourses = enrollments.map(enrollment => {
       const course = allCourses.find(c => c.id === enrollment.courseId);
@@ -32,10 +41,11 @@ const StudentDashboard = () => {
         completed: enrollment.completed
       };
     }).filter(Boolean); // filter out null
-    setEnrolledCourses(studentCourses);
+    // setEnrolledCourses(studentCourses);
     setCourses(allCourses);
     setProgress(allProgress);
   }, [user]);
+
 
   // Function to save progress data
   const saveProgressData = (newProgress) => {
@@ -204,6 +214,75 @@ const StudentDashboard = () => {
               </div>
 
               <div className="row g-4 mb-5">
+                {enrolledCourses.map((course) => (
+                    <div key={course.id} className="col-md-6 mb-4">
+                      <div className="card border-0 shadow-sm h-100">
+                        <div className="position-relative">
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="card-img-top"
+                            style={{ height: "160px", objectFit: "cover" }}
+                            onError={e => { e.target.style.display = 'none'; }}
+                          />
+                          <div className="position-absolute top-0 end-0 m-2">
+                            <span className="badge bg-primary">
+                              {course.category}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="card-body">
+                          <h5 className="card-title fw-bold">{course.title}</h5>
+                          <p className="text-muted small mb-2">
+                            oleh {course.instructor}
+                          </p>
+
+                          <div className="mb-3">
+                            <div className="d-flex justify-content-between small text-muted mb-1">
+                              <span>Progress</span>
+                              <span>
+                                {course.completedLessons}/{course.totalLessons}{" "}
+                                pelajaran
+                              </span>
+                            </div>
+                            <div className="progress" style={{ height: "6px" }}>
+                              <div
+                                className="progress-bar bg-edu-primary"
+                                style={{ width: `${course.progress}%` }}
+                              ></div>
+                            </div>
+                            <small className="text-muted">
+                              {course.progress}% selesai
+                            </small>
+                          </div>
+
+                          {course.nextLesson && (
+                            <div className="mb-3">
+                              <small className="text-muted d-block">
+                                Pelajaran Selanjutnya:
+                              </small>
+                              <strong className="small">
+                                {course.nextLesson}
+                              </strong>
+                            </div>
+                          )}
+
+                          <small className="text-muted d-block mb-3">
+                            Terakhir diakses: {course.lastAccessed}
+                          </small>
+
+                          <Link
+                            to={course.completed ? `/kursus/${course.content_id}` : `/belajar/${course.content_id}`}
+                            className={`btn ${course.completed ? 'btn-outline-success' : 'btn-edu-primary'} w-100`}
+                          >
+                            {course.completed ? 'Lihat Course' : 'Lanjut Belajar'}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              {/* <div className="row g-4 mb-5">
                 {enrolledCourses
                   .filter(
                     (course) => course.progress > 0 && course.progress < 100,
@@ -274,8 +353,8 @@ const StudentDashboard = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
-              </div>
+                  ))} 
+              </div>*/}
 
               {/* Completed Courses */}
               {completedCourses > 0 && (

@@ -9,9 +9,19 @@ const handleError = (error) => {
 
 export const enrollmentAPI = {
   // Enroll in a course
-  enrollCourse: async (courseId) => {
+  postEnrollCourse: async (courseId) => {
     try {
-      const response = await axiosInstance.post(`/enrollments/courses/${courseId}`);
+      const response = await axiosInstance.post(`/api/users/enroll/${courseId}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+  // Get user enrollments by course
+  getContentEnrollments: async (courseId) => {
+    try {
+      const response = await axiosInstance.get(`/api/users/enroll/${courseId}`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -21,7 +31,7 @@ export const enrollmentAPI = {
   // Get user enrollments
   getUserEnrollments: async () => {
     try {
-      const response = await axiosInstance.get('/enrollments');
+      const response = await axiosInstance.get('/api/users/enroll');
       return handleResponse(response);
     } catch (error) {
       return handleError(error);

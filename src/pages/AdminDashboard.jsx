@@ -89,7 +89,7 @@ const AdminDashboard = () => {
       pendingReviews: pending.length
     });
 
-    setNotifications(allNotifications.filter(n => n.userId === 'admin1'));
+    // setNotifications(allNotifications.filter(n => n.userId === 'admin1'));
   };
 
   useEffect(() => {
@@ -150,7 +150,7 @@ const AdminDashboard = () => {
   // };
 
   const handleTeacherApproval = async(teacherId, flag) => {
-      const result = await Swal.fire({
+    const result = await Swal.fire({
       title: "Do you want to approve this?",
       showCancelButton: true,
       confirmButtonText: "Save"

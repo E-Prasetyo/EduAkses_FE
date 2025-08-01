@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
+import { courseAPI } from "../services/api";
 
 // Helper function to extract YouTube video ID
 const extractYouTubeVideoId = (url) => {
@@ -39,20 +40,25 @@ const Learning = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const fetchCourse = async () => {
     setLoading(true);
-    const foundCourse = localStorageService.getCourseById(courseId);
+    // const foundCourse = localStorageService.getCourseById(courseId);
+    const foundCourse = await courseAPI.getCourseDetail(courseId);
     if (!foundCourse) {
       setCourse(null);
       setLoading(false);
       return;
     }
-    setCourse(foundCourse);
+    setCourse(foundCourse.data.content);
     // Ambil progress user
     const progress = localStorageService.getCourseProgress(user.id, courseId);
     setCompletedLessons(progress.completedLessons || []);
     setCompletedQuizzes(progress.completedQuizzes || []);
     setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchCourse(); 
   }, [courseId, user]);
 
   // Fungsi untuk mengecek apakah semua lesson dalam module sudah selesai
@@ -101,64 +107,66 @@ const Learning = () => {
       </div>
     );
   }
-  if (!course.modules || course.modules.length === 0) {
+  if (!course.materials || course.materials.length === 0) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
         <div className="alert alert-warning">Belum ada modul pada kursus ini.</div>
       </div>
     );
   }
-  const totalLessons = course.modules.reduce((acc, module) => acc + (module.lessons ? module.lessons.length : 0), 0);
-  const totalQuizzes = course.modules.reduce((acc, module) => acc + (module.quizzes ? module.quizzes.length : 0), 0);
-  const totalItems = totalLessons + totalQuizzes;
+  // const totalLessons = course.materials.reduce((acc, module) => acc + (module.lessons ? module.lessons.length : 0), 0);
+  // const totalQuizzes = course.materials.reduce((acc, module) => acc + (module.quizzes ? module.quizzes.length : 0), 0);
+  // const totalItems = totalLessons + totalQuizzes;
   
-  // Hitung progress yang benar termasuk quiz
-  const calculateProgress = () => {
-    let completedItems = completedLessons.length;
+  // // Hitung progress yang benar termasuk quiz
+  // const calculateProgress = () => {
+  //   let completedItems = completedLessons.length;
     
-    // Tambahkan quiz yang sudah lulus
-    course.modules.forEach((module, moduleIndex) => {
-      if (module.quizzes) {
-        module.quizzes.forEach(quiz => {
-          if (completedQuizzes.includes(`${moduleIndex}-${quiz.id}`)) {
-            completedItems++;
-          }
-        });
-      }
-    });
+  //   // Tambahkan quiz yang sudah lulus
+  //   course.materials.forEach((module, moduleIndex) => {
+  //     if (module.quizzes) {
+  //       module.quizzes.forEach(quiz => {
+  //         if (completedQuizzes.includes(`${moduleIndex}-${quiz.id}`)) {
+  //           completedItems++;
+  //         }
+  //       });
+  //     }
+  //   });
     
-    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-  };
+  //   return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  // };
   
   // Recalculate progress when completedLessons or completedQuizzes change
-  const currentProgress = calculateProgress();
+  // const currentProgress = calculateProgress();
   
-  const currentModuleData = course.modules[currentModule];
-  if (!currentModuleData || !currentModuleData.lessons || currentModuleData.lessons.length === 0) {
+  const currentModuleData = course?.materials[currentModule];
+  if (!currentModuleData) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
         <div className="alert alert-warning">Belum ada pelajaran pada modul ini.</div>
       </div>
     );
   }
-  const currentLessonData = currentModuleData.lessons[currentLesson];
+  // const currentLessonData = currentModuleData[currentLesson];
   
   // Debug: Log current lesson data
-  console.log('Current Lesson Data:', currentLessonData);
-  console.log('Lesson Type:', currentLessonData?.type);
-  console.log('Video URL:', currentLessonData?.videoUrl);
-  console.log('Text Content:', currentLessonData?.textContent);
-  console.log('Full Course Data:', course);
-  console.log('Current Module Index:', currentModule);
-  console.log('Current Lesson Index:', currentLesson);
-  console.log('Extracted Video ID:', currentLessonData?.videoUrl ? extractYouTubeVideoId(currentLessonData.videoUrl) : 'No video URL');
-  console.log('Current Module Quizzes:', currentModuleData.quizzes);
-  console.log('All Course Modules:', course?.modules?.map((m, i) => ({ index: i, title: m.title, quizzes: m.quizzes?.length || 0 })));
+  // console.log('Current Lesson Data:', currentLessonData);
+  // console.log('Lesson Type:', currentLessonData?.type);
+  // console.log('Video URL:', currentLessonData?.videoUrl);
+  // console.log('Text Content:', currentLessonData?.textContent);
+  // console.log('Full Course Data:', course);
+  // console.log('Current Module Index:', currentModule);
+  // console.log('Current Lesson Index:', currentLesson);
+  // console.log('Extracted Video ID:', currentLessonData?.videoUrl ? extractYouTubeVideoId(currentLessonData.videoUrl) : 'No video URL');
+  // console.log('Current Module Quizzes:', currentModuleData.quizzes);
+  // console.log('All Course Modules:', course?.modules?.map((m, i) => ({ index: i, title: m.title, quizzes: m.quizzes?.length || 0 })));
   
   // Deklarasikan isLastLesson sebelum return utama
+  // const isLastLesson =
+  //   currentModule === course?.materials.length - 1;
+  // && currentLesson === currentModuleData?.materials.length - 1;
   const isLastLesson =
-    currentModule === course.modules.length - 1 &&
-    currentLesson === currentModuleData.lessons.length - 1;
+    currentModule === course?.materials.length - 1;
 
   const markAsComplete = () => {
     // Cek apakah lesson bisa ditandai selesai
@@ -195,47 +203,36 @@ const Learning = () => {
     setCurrentLesson(lessonIndex);
   };
 
-  const saveProgress = () => {
-    const progress = {
-      currentModule,
-      currentLesson,
-      completedLessons: Array.from(completedLessons)
-    };
-    localStorage.setItem(`course_${id}_progress`, JSON.stringify(progress));
-  };
+  // const saveProgress = () => {
+  //   const progress = {
+  //     currentModule,
+  //     currentLesson,
+  //     completedLessons: Array.from(completedLessons)
+  //   };
+  //   localStorage.setItem(`course_${id}_progress`, JSON.stringify(progress));
+  // };
 
   const nextLesson = () => {
-    markAsComplete();
+    // markAsComplete();
 
     if (isLastLesson) {
-      // If this is the last lesson and all lessons are completed, navigate to the quiz
-      if (currentModuleData.quizzes && 
-          currentModuleData.quizzes.length > 0 && 
-          isModuleCompleted(currentModule) && 
-          !isModuleQuizPassed(currentModule)) {
-        navigate(`/kuis/${courseId}/${currentModuleData.quizzes[0].id}`);
-      } else if (currentModule < course.modules.length - 1) {
-        // If there's no quiz or lessons aren't completed, move to next module
-        setCurrentModule(currentModule + 1);
-        setCurrentLesson(0);
-      }
-    } else if (currentLesson < currentModuleData.lessons.length - 1) {
-      // Move to next lesson in the same module
-      setCurrentLesson(currentLesson + 1);
-    } else if (currentModule < course.modules.length - 1) {
+      setCurrentModule(0);
+      navigate(`/kuis/${courseId}`);
+      // console.log(window.location.href)
+    } else if (currentModule < course?.materials.length -1) {
       // Move to next module
-      setCurrentModule(currentModule + 1);
-      setCurrentLesson(0);
+      setCurrentModule(prev => prev + 1);
     }
   };
 
   const prevLesson = () => {
-    if (currentLesson > 0) {
-      setCurrentLesson(currentLesson - 1);
-    } else if (currentModule > 0) {
-      setCurrentModule(currentModule - 1);
-      setCurrentLesson(course.modules[currentModule - 1].lessons.length - 1);
-    }
+    // if (currentLesson > 0) {
+      // setCurrentLesson(currentLesson - 1);
+    // } else if (currentModule > 0) {
+      // setCurrentModule(currentModule - 1);
+      // setCurrentLesson(course.modules[currentModule - 1].lessons.length - 1);
+    // }
+    setCurrentModule((prev) => prev - 1);
   };
 
   // Fungsi untuk mendapatkan teks tombol selanjutnya
@@ -259,10 +256,10 @@ const Learning = () => {
   // Fungsi untuk mengecek apakah tombol selanjutnya bisa diklik
   const canProceedToNext = () => {
     if (isLastLesson) {
-      if (currentModuleData.quizzes && 
-          currentModuleData.quizzes.length > 0) {
-        return isModuleCompleted(currentModule);
-      }
+      // if (currentModuleData.quizzes && 
+      //     currentModuleData.quizzes.length > 0) {
+      //   return isModuleCompleted(currentModule);
+      // }
       return true;
     }
     return true;
@@ -284,14 +281,14 @@ const Learning = () => {
                 Kembali
               </button>
               <span className="badge bg-primary">
-                {completedLessons.length + completedQuizzes.length}/{totalItems} Selesai
+                {/* {completedLessons.length + completedQuizzes.length}/{totalItems} Selesai */}
               </span>
             </div>
 
             <h2 className="h5 mb-4">{course.title}</h2>
 
             <div className="accordion" id="moduleAccordion">
-              {course.modules.map((module, moduleIndex) => (
+              {course?.materials.map((module, moduleIndex) => (
                 <div key={module.id} className="accordion-item">
                   <h2 className="accordion-header">
                     <button 
@@ -302,22 +299,24 @@ const Learning = () => {
                     >
                       <div className="d-flex align-items-center justify-content-between w-100">
                         <span>{module.title}</span>
-                        <small className="badge bg-primary ms-2">
-                          {module.lessons.filter((_, idx) => isLessonCompleted(moduleIndex, idx)).length + 
-                          (module.quizzes ? module.quizzes.filter(quiz => isQuizCompleted(moduleIndex, quiz.id)).length : 0)}/
-                         {module.lessons.length + (module.quizzes ? module.quizzes.length : 0)}
-                        </small>
+                        {/*
+                          <small className="badge bg-primary ms-2">
+                            {module.lessons.filter((_, idx) => isLessonCompleted(moduleIndex, idx)).length + 
+                            (module.quizzes ? module.quizzes.filter(quiz => isQuizCompleted(moduleIndex, quiz.id)).length : 0)}/
+                          {module.lessons.length + (module.quizzes ? module.quizzes.length : 0)} 
+                          </small
+                        >*/}
                       </div>
                     </button>
                   </h2>
-                  <div 
+                  {/* <div 
                     id={`module${moduleIndex}`} 
                     className={`accordion-collapse collapse ${currentModule === moduleIndex ? 'show' : ''}`}
                   >
                     <div className="accordion-body p-0">
-                      <div className="list-group list-group-flush">
+                      <div className="list-group list-group-flush"> */}
                         {/* Lessons */}
-                        {module.lessons.map((lesson, lessonIndex) => (
+                        {/* {module.lessons.map((lesson, lessonIndex) => (
                           <button
                             key={lesson.id}
                             onClick={() => navigateToLesson(moduleIndex, lessonIndex)}
@@ -359,10 +358,10 @@ const Learning = () => {
                               </small>
                             </div>
                           </button>
-                        ))}
+                        ))} */}
                         
                         {/* Quizzes */}
-                        {module.quizzes && module.quizzes.map((quiz) => (
+                        {/* {module.quizzes && module.quizzes.map((quiz) => (
                           <Link
                             key={quiz.id}
                             to={`/kuis/${courseId}/${quiz.id}`}
@@ -394,10 +393,10 @@ const Learning = () => {
                               </small>
                             </div>
                           </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                        ))} */}
+                      {/* </div>
+                    </div> 
+                  </div>*/}
                 </div>
               ))}
             </div>
@@ -410,8 +409,8 @@ const Learning = () => {
           <div className="bg-white border-bottom p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
-                <h1 className="h4 mb-2">{currentLessonData.title}</h1>
-                <p className="text-muted mb-0">{currentLessonData.description}</p>
+                <h1 className="h4 mb-2">{currentModuleData.title}</h1>
+                {/* <p className="text-muted mb-0">{currentModule.description}</p> */}
               </div>
               <div className="d-flex gap-2">
                 <button
@@ -423,57 +422,61 @@ const Learning = () => {
                 </button>
                 <button 
                   onClick={() => {
-                    if (isLastLesson && currentModule === course.modules.length - 1 && isModuleCompleted(currentModule) && isModuleQuizPassed(currentModule)) {
-                      // Redirect ke dashboard sesuai role
-                      if (user.role === 'teacher') {
-                        navigate('/pengajar/dashboard');
-                      } else if (user.role === 'admin') {
-                        navigate('/admin/dashboard');
-                      } else {
-                        navigate('/pelajar/dashboard');
-                      }
-                    } else {
+                    // if (isLastLesson
+                      // && currentModule === course.modules.length - 1 && isModuleCompleted(currentModule) && isModuleQuizPassed(currentModule)
+                    // ) {
+                    //   // Redirect ke dashboard sesuai role
+                      // if (user.role === 'teacher') {
+                      //   navigate('/pengajar/dashboard');
+                      // } else if (user.role === 'admin') {
+                      //   navigate('/admin/dashboard');
+                      // } else {
+                      //   navigate('/pelajar/dashboard');
+                      // }
+                    // } else {
                       nextLesson();
-                    }
+                    // }
                   }}
                   disabled={!canProceedToNext()}
                   className="btn btn-primary"
                 >
-                  {getNextButtonText()} 
+                  {/* {getNextButtonText()}  */}
                   <i className="bi bi-arrow-right ms-1"></i>
                 </button>
-              </div>
+              </div> 
             </div>
-            <div className="progress" style={{ height: '6px' }}>
-              <div 
-                className="progress-bar bg-primary" 
-                style={{ width: `${currentProgress}%` }}
-              ></div>
-            </div>
+            {/* 
+              <div className="progress" style={{ height: '6px' }}>
+                <div 
+                  className="progress-bar bg-primary" 
+                  style={{ width: `${currentProgress}%` }}
+                ></div>
+              </div> 
+            */}
           </div>
 
           {/* Lesson Content */}
           <div className="p-4 flex-grow-1">
-            {currentLessonData.type === "video" ? (
+            {currentModuleData.type === "video" ? (
               <div className="container">
-                {currentLessonData.videoUrl ? (
+                {currentModuleData.videourl ? (
                   <>
                     <div className="ratio ratio-16x9 mb-4">
                       <iframe
-                        src={`https://www.youtube.com/embed/${extractYouTubeVideoId(currentLessonData.videoUrl)}`}
-                        title={currentLessonData.title}
+                        src={`https://www.youtube.com/embed/${extractYouTubeVideoId(currentModuleData.videourl)}`}
+                        title={currentModuleData.title}
                         allowFullScreen
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       ></iframe>
                     </div>
-                    {currentLessonData.textContent && (
+                    {currentModuleData.description && (
                       <div className="mt-4">
                         <h5>Deskripsi Video:</h5>
                         <div
                           className="content"
                           dangerouslySetInnerHTML={{
-                            __html: currentLessonData.textContent,
+                            __html: currentModuleData.description,
                           }}
                         />
                       </div>
@@ -489,12 +492,12 @@ const Learning = () => {
                 )}
               </div>
             ) : (
-              <div className="container">
-                {currentLessonData.textContent ? (
+            <div className="container">
+                {currentModuleData.description ? (
                   <div
                     className="content"
                     dangerouslySetInnerHTML={{
-                      __html: currentLessonData.textContent,
+                      __html: currentModuleData.description,
                     }}
                   />
                 ) : (
@@ -510,7 +513,7 @@ const Learning = () => {
           </div>
 
           {/* Action Footer */}
-          <div className="bg-white border-top p-4 mt-auto">
+          {/* <div className="bg-white border-top p-4 mt-auto">
             <div className="container d-flex justify-content-between align-items-center">
               <div className="d-flex align-items-center gap-3">
                 <button
@@ -552,7 +555,7 @@ const Learning = () => {
                 Modul {currentModule + 1}
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

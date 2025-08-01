@@ -4,6 +4,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { localStorageService } from "../services/localStorageService";
 import { useAuth } from "../contexts/AuthContext";
+import { userAPI } from "../services/userAPI";
 
 const TeacherDashboard = () => {
   const { user } = useAuth();
@@ -16,57 +17,59 @@ const TeacherDashboard = () => {
   useEffect(() => {
     if (!user) return;
 
-    const loadTeacherData = () => {
+    const loadTeacherData = async() => {
       // Load all data from localStorage
-      const allCourses = localStorageService.getCourses() || [];
-      const allStudents = localStorageService.getUsers().filter(u => u.role === 'student');
-      const allEnrollments = localStorageService.getEnrollments() || [];
-      const teacherNotifications = (localStorageService.getNotifications() || [])
-        .filter(notif => notif.userId === user.id)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // const allCourses = localStorageService.getCourses() || [];
+      // const allStudents = localStorageService.getUsers().filter(u => u.role === 'student');
+      // const allEnrollments = localStorageService.getEnrollments() || [];
+      // const teacherNotifications = (localStorageService.getNotifications() || [])
+      //   .filter(notif => notif.userId === user.id)
+      //   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
-      // Debug: Log user dan courses data
-      console.log('Current User:', user);
-      console.log('All Courses:', allCourses);
-      console.log('User ID:', user.id);
-      console.log('User Role:', user.role);
+      // // Debug: Log user dan courses data
+      // console.log('Current User:', user);
+      // console.log('All Courses:', allCourses);
+      // console.log('User ID:', user.id);
+      // console.log('User Role:', user.role);
       
-      // Filter courses for this teacher - perbaiki logika filter
-      const teacherCourses = allCourses.filter(course => {
-        console.log('Course:', course.title, 'TeacherId:', course.teacherId, 'User ID:', user.id);
-        // Filter berdasarkan teacherId atau instructor name, atau jika user adalah admin
-        return course.teacherId === user.id || 
-               course.instructor === user.name || 
-               (user.role === 'admin' && course.status === 'PUBLISHED');
-      });
+      // // Filter courses for this teacher - perbaiki logika filter
+      // const teacherCourses = allCourses.filter(course => {
+      //   console.log('Course:', course.title, 'TeacherId:', course.teacherId, 'User ID:', user.id);
+      //   // Filter berdasarkan teacherId atau instructor name, atau jika user adalah admin
+      //   return course.teacherId === user.id || 
+      //          course.instructor === user.name || 
+      //          (user.role === 'admin' && course.status === 'PUBLISHED');
+      // });
       
-      console.log('Filtered Teacher Courses:', teacherCourses);
+      // console.log('Filtered Teacher Courses:', teacherCourses);
   
-      // Calculate course statistics
-      const coursesWithStats = teacherCourses.map(course => {
-        const courseEnrollments = allEnrollments.filter(e => e.courseId === course.id);
-        const courseStudents = courseEnrollments.length;
-        const courseRevenue = courseStudents * (course.price || 0);
-        const courseRatings = courseEnrollments.map(e => e.rating).filter(r => r);
-        const averageRating = courseRatings.length > 0
-          ? courseRatings.reduce((a, b) => a + b, 0) / courseRatings.length
-          : 0;
+      // // Calculate course statistics
+      // const coursesWithStats = teacherCourses.map(course => {
+      //   const courseEnrollments = allEnrollments.filter(e => e.courseId === course.id);
+      //   const courseStudents = courseEnrollments.length;
+      //   const courseRevenue = courseStudents * (course.price || 0);
+      //   const courseRatings = courseEnrollments.map(e => e.rating).filter(r => r);
+      //   const averageRating = courseRatings.length > 0
+      //     ? courseRatings.reduce((a, b) => a + b, 0) / courseRatings.length
+      //     : 0;
   
-        return {
-          ...course,
-          students: courseStudents,
-          revenue: courseRevenue,
-          rating: averageRating,
-          reviews: courseRatings.length,
-          completion: courseEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / courseStudents || 0,
-          views: Math.floor(Math.random() * 5000) // TODO: Implement actual view tracking
-        };
-      });
+      //   return {
+      //     ...course,
+      //     students: courseStudents,
+      //     revenue: courseRevenue,
+      //     rating: averageRating,
+      //     reviews: courseRatings.length,
+      //     completion: courseEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / courseStudents || 0,
+      //     views: Math.floor(Math.random() * 5000) // TODO: Implement actual view tracking
+      //   };
+      // });
+      
+      const result = await userAPI.getAllTeachersContentSelf();
   
-      setMyCourses(coursesWithStats);
-      setStudents(allStudents);
-      setEnrollments(allEnrollments);
-      setNotifications(teacherNotifications);
+      setMyCourses(result.data.content);
+      // setStudents(allStudents);
+      // setEnrollments(allEnrollments);
+      // setNotifications(teacherNotifications);
     };
   
     loadTeacherData();

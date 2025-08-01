@@ -5,6 +5,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
 import { stripHtml } from "../lib/utils";
 import { courseAPI } from "../services/api";
+import { enrollmentAPI } from "../services/enrollmentAPI";
+import Swal from "sweetalert2";
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -16,6 +18,7 @@ const CourseDetail = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [editedCourse, setEditedCourse] = useState(null);
+  const [trigger, setTrigger] = useState(false);
 
   // Function to ensure course has all required fields
   const ensureCourseData = (course) => {
@@ -81,8 +84,9 @@ const CourseDetail = () => {
         setEditedCourse(processedCourse);
         // Check if user is enrolled
         if (user) {
-          const enrollments = localStorageService.getUserEnrollments(user.id);
-          setIsEnrolled(enrollments.some((e) => e.courseId === id));
+          // const enrollments = localStorageService.getUserEnrollments(user.id);
+          const enrollments = await enrollmentAPI.getContentEnrollments(id);
+          setIsEnrolled(enrollments.data.contentEnroll.length > 0);
         }
       } catch (error) {
         console.error("Error fetching course:", error);
@@ -92,18 +96,40 @@ const CourseDetail = () => {
       }
     };
     fetchCourse();
-  }, [id, user, navigate]);
+  }, [id, user, navigate, trigger]);
 
-  const handleEnroll = () => {
+  const handleEnroll = async() => {
     if (!user) {
       navigate("/login");
       return;
     }
+
     try {
-      localStorageService.enrollCourse(user.id, course.id);
-      setIsEnrolled(true);
-      navigate(`/belajar/${course.id}`);
+      // localStorageService.enrollCourse(user.id, course.id);
+      const result = await Swal.fire({
+        title: "Do you want to enroll this?",
+        showCancelButton: true,
+        confirmButtonText: "Save"
+      });
+      if (result.isConfirmed) {
+        const response = await enrollmentAPI.postEnrollCourse(id);
+        Swal.fire({
+          title: response.status,
+          text: response.message,
+          icon: "success"
+        });
+        
+        setTimeout(() => {
+          setIsEnrolled(true);
+          navigate(`/belajar/${course.id}`);
+        }, 1000);
+      }
     } catch (error) {
+      Swal.fire({
+        title: "Error",
+        text: error.message,
+        icon: "error"
+      });
       console.error("Error enrolling in course:", error);
     }
   };

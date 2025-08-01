@@ -48,6 +48,7 @@ import EditCourse from "./pages/EditCourse";
 
 // Error Pages
 import NotFound from "./pages/NotFound";
+import ResultQuiz from "./pages/ResultQuiz";
 
 //MIGRASI DATA COURSE GAMBAR BLOB KE BASE64/DEFAULT
 (function migrateCourseImages() {
@@ -218,6 +219,22 @@ const App = () => (
               }
             />
             <Route
+              path="/kuis/:courseId"
+              element={
+                <ProtectedRoute>
+                  <Quiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/kuis/result/:courseId"
+              element={
+                <ProtectedRoute>
+                  <ResultQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/diskusi"
               element={
                 <ProtectedRoute>
@@ -355,7 +372,5 @@ const App = () => (
 );
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  // <React.StrictMode>
     <App />
-  // </React.StrictMode>
 );

@@ -94,12 +94,21 @@ export const courseAPI = {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axiosInstance.get(`/api/contents/${courseId}/materials`,{
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.get(`/api/contents/${courseId}/materials`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+  // Fetch course by ID or slug
+  getCourseMaterialQuiz: async (courseId) => {
+    if (!courseId) {
+      console.error('CourseId is required');
+      return null;
+    }
+
+    try {
+      const response = await axiosInstance.get(`/api/contents/${courseId}/cmq`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -109,7 +118,11 @@ export const courseAPI = {
   // Create new course
   createCourse: async (courseData) => {
     try {
-      const response = await axiosInstance.post('/courses', courseData);
+       const response = await axiosInstance.post('/api/courses', courseData,{
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -134,6 +147,21 @@ export const courseAPI = {
       if (!id) throw new Error('Course ID is required');
       
       const response = await axiosInstance.delete(`/courses/${id}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // Add quiz to module
+  getQuiz: async (courseId) => {
+    try {
+      if (
+        !courseId
+        // || !moduleId
+      ) throw new Error('Course ID and Module ID are required');
+      
+      const response = await axiosInstance.get(`/api/contents/${courseId}/quizzes`);
       return handleResponse(response);
     } catch (error) {
       return handleError(error);
@@ -166,6 +194,38 @@ export const courseAPI = {
   deleteQuiz: async (courseId, moduleId, quizId) => {
     try {
       const response = await axiosInstance.delete(`/courses/${courseId}/modules/${moduleId}/quizzes/${quizId}`);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+   // post quiz answers
+  answerQuiz: async (quizData) => {
+    try {
+      // if (
+      //   !courseId
+      //   // ||
+      //   // !moduleId
+      // ) throw new Error('Course ID and Module ID are required');
+      
+      const response = await axiosInstance.post(`/api/users/quiz/answers`, quizData);
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
+
+    // post quiz answers
+  getReviewAnswerQuiz: async (courseId) => {
+    try {
+      // if (
+      //   !courseId
+      //   // ||
+      //   // !moduleId
+      // ) throw new Error('Course ID and Module ID are required');
+      
+      const response = await axiosInstance.get(`/api/users/quiz/answers/${courseId}`, );
       return handleResponse(response);
     } catch (error) {
       return handleError(error);

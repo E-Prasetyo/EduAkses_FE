@@ -188,6 +188,15 @@ export const userAPI = {
     } catch (error) {
       return handleError(error);
     }
-  }
+  },
+
+  getAllTeachersContentSelf: async () => {
+    try {
+      const response = await axiosInstance.get('/api/contents/me');
+      return handleResponse(response);
+    } catch (error) {
+      return handleError(error);
+    }
+  },
 
 };

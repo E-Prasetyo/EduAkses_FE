@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Editor } from "@tinymce/tinymce-react";
 import Footer from "../components/Footer";
 import { useAuth } from "../contexts/AuthContext";
 import { localStorageService } from "../services/localStorageService";
+import { userAPI } from "../services/userAPI";
+import { courseAPI } from "../services/api";
 
 const TINYMCE_API_KEY = import.meta.env.VITE_TINYMCE_API_KEY;
 
@@ -26,9 +28,9 @@ const CreateCourse = () => {
     category: "Teknologi",
     coverImage: null,
     level: "Pemula",
-    duration: "",
-    price: "free",
-    customPrice: "",
+    // duration: "",
+    // price: "free",
+    // customPrice: "",
     status: "DRAFT"
   });
 
@@ -56,18 +58,28 @@ const CreateCourse = () => {
     },
   ]);
 
-  const [categories, setCategories] = useState([
-    "Teknologi",
-    "Seni & Desain",
-    "Bisnis",
-    "Literasi & Kewirausahaan",
-    "Pengembangan Diri",
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [levelss, setLevelss] = useState([]);
+  const hasFetched = useRef(false);   
+
+  const fetchData = async () => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    const storedCategories = await userAPI.getCategories();
+    const storedLevels = await userAPI.getLevels();
+    setCategories(storedCategories.data.categories);
+    setLevelss(storedLevels.data.levels);
+  }
 
   useEffect(() => {
-    const storedCategories = localStorageService.getCategories();
-    if (storedCategories && storedCategories.length > 0) {
-      setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    // const storedCategories = localStorageService.getCategories();
+    // if (storedCategories && storedCategories.length > 0) {
+    //   setCategories(storedCategories.map(cat => typeof cat === "string" ? cat : cat.name));
+    // }
+    
+    fetchData();
+    return () => {
+      // console.log('clean')
     }
   }, []);
 
@@ -166,7 +178,7 @@ const CreateCourse = () => {
         setCourseData({
           ...courseData,
           coverImage: base64,
-          thumbnail: base64,
+          thumbnail: file,
           image: base64, // Pastikan image juga diisi
         });
         
@@ -198,9 +210,10 @@ const CreateCourse = () => {
   };
 
   const updateModule = (moduleIndex, field, value) => {
-    const updatedModules = modules.map((module, index) =>
-      index === moduleIndex ? { ...module, [field]: value } : module,
-    );
+
+    const updatedModules = modules.map((module, index) => 
+      index === moduleIndex ? { ...module, [field]: value } : module
+    )
     setModules(updatedModules);
   };
 
@@ -350,10 +363,9 @@ const CreateCourse = () => {
     if (!courseData.duration.trim()) {
       newErrors.duration = "Durasi kursus wajib diisi";
     }
-    if (courseData.price === "paid" && !courseData.customPrice) {
-      newErrors.customPrice = "Harga kursus wajib diisi";
-    }
-
+    // if (courseData.price === "paid" && !courseData.customPrice) {
+    //   newErrors.customPrice = "Harga kursus wajib diisi";
+    // }
     // Validasi modul dan pelajaran
     if (modules.length === 0) {
       newErrors.modules = "Minimal harus ada satu modul";
@@ -398,59 +410,74 @@ const CreateCourse = () => {
       }
 
       // Prepare course data
-      const newCourse = {
-        id: Date.now().toString(),
-        teacherId: user.id,
-        instructor: user.name,
-        title: courseData.title,
-        description: courseData.description,
-        category: courseData.category,
-        level: courseData.level,
-        duration: courseData.duration,
-        price: courseData.price === 'paid' ? parseInt(courseData.customPrice) : 0,
-        status: 'PENDING_REVIEW',
-        submittedDate: new Date().toISOString(),
-        modules: modules,
-        quizzes: quizzes,
-        students: 0,
-        rating: 0,
-        reviews: [],
-        thumbnail: courseData.coverImage || courseData.thumbnail || courseData.image || '',
-        coverImage: courseData.coverImage || courseData.thumbnail || courseData.image || '',
-        image: courseData.coverImage || courseData.thumbnail || courseData.image || '',
-        lastUpdated: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        overview: courseData.description.substring(0, 200) + '...',
-        whatYouLearn: []
-      };
+      // const newCourse = {
+      //   id: Date.now().toString(),
+      //   teacherId: user.id,
+      //   instructor: user.name,
+      //   title: courseData.title,
+      //   description: courseData.description,
+      //   category: courseData.category,
+      //   level: courseData.level,
+      //   duration: courseData.duration,
+      //   // price: courseData.price === 'paid' ? parseInt(courseData.customPrice) : 0,
+      //   status: 'PENDING_REVIEW',
+      //   submittedDate: new Date().toISOString(),
+      //   modules: modules,
+      //   quizzes: quizzes,
+      //   students: 0,
+      //   rating: 0,
+      //   reviews: [],
+      //   thumbnail: courseData.thumbnail,
+      //   coverImage: courseData.coverImage || courseData.thumbnail || courseData.image || '',
+      //   image: courseData.coverImage || courseData.thumbnail || courseData.image || '',
+      //   lastUpdated: new Date().toISOString(),
+      //   createdAt: new Date().toISOString(),
+      //   overview: courseData.description.substring(0, 200) + '...',
+      //   whatYouLearn: []
+      // };
 
-      console.log('Creating new course:', newCourse);
+        const formData = new FormData();
+        formData.append('title', courseData.title);
+        formData.append('description', courseData.description);
+        formData.append('category', courseData.category);
+        formData.append('level', courseData.level);
+        formData.append('duration', courseData.duration);
+        formData.append('modules', JSON.stringify(modules));
+        formData.append('quizzes', JSON.stringify(quizzes));
+        formData.append('thumbnail', courseData.thumbnail);
+        // formData.append('coverImage', courseData.coverImage || courseData.thumbnail || courseData.image || '');
+        // formData.append('image', courseData.coverImage || courseData.thumbnail || courseData.image || '');
+        formData.append('lastUpdated', new Date().toISOString());
+        formData.append('createdAt', new Date().toISOString());
 
-      // Save to localStorage
-      const existingCourses = localStorageService.getCourses() || [];
-      const updatedCourses = [...existingCourses, newCourse];
-      const saveResult = localStorageService.saveCourses(updatedCourses);
-      if (!saveResult) {
-        alert('Gagal menyimpan course. Storage penuh atau terjadi error! Silakan hapus course lama atau gunakan gambar yang lebih kecil.');
-        setIsSubmitting(false);
-        return;
-      }
 
-      // Create notification for admin
-      const notifications = localStorageService.getNotifications() || [];
-      const newNotification = {
-        id: Date.now(),
-        userId: 'admin1',
-        courseId: newCourse.id,
-        message: `Kursus baru "${courseData.title}" telah diajukan oleh ${user.name} dan menunggu review`,
-        type: 'NEW_COURSE',
-        isRead: false,
-        createdAt: new Date().toISOString()
-      };
+      const result = await courseAPI.createCourse(formData);
+
+      // // Save to localStorage
+      // const existingCourses = localStorageService.getCourses() || [];
+      // const updatedCourses = [...existingCourses, newCourse];
+      // const saveResult = localStorageService.saveCourses(updatedCourses);
+      // if (!saveResult) {
+      //   alert('Gagal menyimpan course. Storage penuh atau terjadi error! Silakan hapus course lama atau gunakan gambar yang lebih kecil.');
+      //   setIsSubmitting(false);
+      //   return;
+      // }
+
+      // // Create notification for admin
+      // const notifications = localStorageService.getNotifications() || [];
+      // const newNotification = {
+      //   id: Date.now(),
+      //   userId: 'admin1',
+      //   courseId: newCourse.id,
+      //   message: `Kursus baru "${courseData.title}" telah diajukan oleh ${user.name} dan menunggu review`,
+      //   type: 'NEW_COURSE',
+      //   isRead: false,
+      //   createdAt: new Date().toISOString()
+      // };
       
-      localStorageService.saveNotifications([...notifications, newNotification]);
+      // localStorageService.saveNotifications([...notifications, newNotification]);
 
-      console.log('Course created successfully:', newCourse.id);
+      // console.log('Course created successfully:', newCourse.id);
 
       alert('Kursus berhasil dibuat dan sedang menunggu review dari admin!');
       navigate('/pengajar/dashboard');
@@ -523,10 +550,10 @@ const CreateCourse = () => {
                           required
                           className={`form-select h-12 ${errors.category ? 'is-invalid' : ''}`}
                         >
-                          <option value="">Pilih kategori</option>
-                          {categories.map((category) => (
-                            <option key={category} value={category}>
-                              {category}
+                          <option>Pilih kategori</option>
+                          {Array.isArray(categories) && categories?.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.title}
                             </option>
                           ))}
                         </select>
@@ -544,59 +571,13 @@ const CreateCourse = () => {
                         onChange={handleInputChange}
                         className="form-select h-12"
                       >
-                        <option value="Pemula">Pemula</option>
-                        <option value="Menengah">Menengah</option>
-                        <option value="Lanjutan">Lanjutan</option>
+                        <option>Pilih levels</option>
+                        {levelss.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.title}
+                          </option>
+                        ))}
                       </select>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label fw-medium">Harga</label>
-                      <div className="d-flex gap-3 align-items-center">
-                        <div className="form-check">
-                          <input
-                            type="radio"
-                            id="free"
-                            name="price"
-                            value="free"
-                            checked={courseData.price === 'free'}
-                            onChange={handleInputChange}
-                            className="form-check-input"
-                          />
-                          <label className="form-check-label" htmlFor="free">
-                            Gratis
-                          </label>
-                        </div>
-                        <div className="form-check">
-                          <input
-                            type="radio"
-                            id="paid"
-                            name="price"
-                            value="paid"
-                            checked={courseData.price === 'paid'}
-                            onChange={handleInputChange}
-                            className="form-check-input"
-                          />
-                          <label className="form-check-label" htmlFor="paid">
-                            Berbayar
-                          </label>
-                        </div>
-                      </div>
-                      {courseData.price === 'paid' && (
-                        <div className="mt-2">
-                          <input
-                            type="number"
-                            name="customPrice"
-                            value={courseData.customPrice}
-                            onChange={handleInputChange}
-                            className={`form-control h-12 ${errors.customPrice ? 'is-invalid' : ''}`}
-                            placeholder="Masukkan harga kursus"
-                          />
-                          {errors.customPrice && (
-                            <div className="invalid-feedback">{errors.customPrice}</div>
-                          )}
-                        </div>
-                      )}
                     </div>
 
                     <div className="mb-3">
@@ -691,7 +672,7 @@ const CreateCourse = () => {
                       )}
                     </div>
                   </div>
-                </div>
+                </div> 
 
                 <div className="mt-4">
                   <label className="form-label fw-medium">
@@ -726,7 +707,7 @@ const CreateCourse = () => {
                   </div>
                 </div>
               </div>
-              <div className="mt-4 d-flex justify-content-end">
+              {/* <div className="mt-4 d-flex justify-content-end">
                 <button
                   type="button"
                   onClick={handleSaveBasicInfo}
@@ -735,11 +716,11 @@ const CreateCourse = () => {
                 >
                   {basicInfoSaved ? "Informasi Dasar Tersimpan" : "Simpan Informasi Dasar"}
                 </button>
-              </div>
+              </div> */}
             </div>
 
             {/* Modules and Lessons */}
-            {showModuleForm && (
+            {/* {showModuleForm && ( */}
               <div className="card border-edu-light-grey rounded-2xl mb-4">
                 <div className="card-body p-4">
                   <div className="d-flex justify-content-between align-items-center mb-4">
@@ -788,6 +769,7 @@ const CreateCourse = () => {
                                   <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_title`]}</div>
                                 )}
                               </div>
+                              
                               {modules.length > 1 && (
                                 <button
                                   type="button"
@@ -950,7 +932,7 @@ const CreateCourse = () => {
                                             {errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`] && (
                                               <div className="invalid-feedback d-block">{errors[`module_${moduleIndex}_lesson_${lessonIndex}_video`]}</div>
                                             )}
-                                           {/* Preview embed jika ID valid */}
+                               
                                            {lesson.videoUrl && extractYouTubeVideoId(lesson.videoUrl) && (
                                              <div className="mt-2 ratio ratio-16x9">
                                                <iframe
@@ -988,7 +970,7 @@ const CreateCourse = () => {
                               ))}
                             </div>
 
-                            <div className="mt-3">
+                            {/* <div className="mt-3">
                               <button
                                 type="button"
                                 onClick={() => addLesson(moduleIndex)}
@@ -996,7 +978,7 @@ const CreateCourse = () => {
                               >
                                 + Tambah Pelajaran
                               </button>
-                            </div>
+                            </div> */}
                           </div>
                         </div>
                       </div>
@@ -1004,7 +986,7 @@ const CreateCourse = () => {
                   </div>
                 </div>
               </div>
-            )}
+            {/* )} */}
 
             {/* Submit */}
             <div className="d-flex justify-content-end gap-3">
@@ -1016,17 +998,17 @@ const CreateCourse = () => {
               </Link>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                // disabled={isSubmitting}
                 className="btn btn-edu-primary font-jost fw-medium"
               >
-                {isSubmitting ? (
+                {/* {isSubmitting ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Menyimpan...
                   </>
-                ) : (
+                ) : ( */}
                   'Simpan Kursus'
-                )}
+                {/* )} */}
               </button>
             </div>
           </form>
